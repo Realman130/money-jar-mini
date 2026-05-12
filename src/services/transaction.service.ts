@@ -52,6 +52,35 @@ export async function softDeleteTransaction(id: string) {
   }
 }
 
+export async function updateTransaction(
+  id: string,
+  input: {
+    amount: number;
+    type: "thu" | "chi";
+    category_id: string | null;
+    wallet_id: string | null;
+    note: string;
+    transaction_date: string;
+    raw_input?: string;
+  }
+) {
+  const { error } = await supabase
+    .from("transactions")
+    .update({
+      amount: input.amount,
+      type: input.type,
+      category_id: input.category_id,
+      wallet_id: input.wallet_id,
+      note: input.note,
+      transaction_date: input.transaction_date,
+      ...(input.raw_input != null ? { raw_input: input.raw_input } : {})
+    })
+    .eq("id", id);
+  if (error) {
+    throw error;
+  }
+}
+
 export async function fetchTransactionsEnriched(uid: number, filters: TxFilters = {}) {
   let q = supabase
     .from("v_transactions_enriched")
