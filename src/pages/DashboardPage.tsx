@@ -159,7 +159,7 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Money Jar Mini" subtitle={`Tháng ${month.slice(5, 7)}/${month.slice(0, 4)}`} kicker="Premium fintech" />
+      <PageHeader title="Tổng quan" subtitle={`Tháng ${month.slice(5, 7)}/${month.slice(0, 4)}`} />
 
       <Surface className="relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(91,140,255,0.22),transparent_35%),radial-gradient(circle_at_bottom_left,rgba(74,222,128,0.1),transparent_30%)]" />
@@ -242,9 +242,9 @@ export function DashboardPage() {
           to="/quick"
           className="group rounded-[24px] border border-white/10 bg-mjm-accent/16 p-4 transition duration-200 hover:-translate-y-0.5 hover:bg-mjm-accent/20"
         >
-          <Pill tone="accent">AI</Pill>
+          <Pill tone="accent">Lưu luôn</Pill>
           <p className="mt-3 font-display text-[1.15rem] font-semibold tracking-[-0.03em] text-mjm-text">Nhập nhanh</p>
-          <p className="mt-1 text-sm leading-6 text-mjm-muted">Text parsing có gợi ý để vào nhanh hơn.</p>
+          <p className="mt-1 text-sm leading-6 text-mjm-muted">Tự phân tích danh mục, hũ và ví ngay khi nhập.</p>
         </Link>
       </div>
 
