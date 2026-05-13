@@ -215,12 +215,7 @@ export function QuickAddPage() {
 
   const textPreview = (() => {
     if (!text.trim()) {
-      return (
-        <div className="rounded-[22px] border border-dashed border-white/10 bg-white/[0.03] p-4 text-sm leading-6 text-mjm-muted">
-          Gõ câu như <span className="font-semibold text-mjm-text">cf 35k bank</span> hoặc <span className="font-semibold text-mjm-text">ăn trưa 55k</span>.
-          App sẽ tự nhận diện danh mục, hũ và ví trước khi bấm lưu.
-        </div>
-      );
+      return null;
     }
     if (liveParsed && "error" in liveParsed) {
       return (
@@ -239,8 +234,6 @@ export function QuickAddPage() {
           <div className="flex items-start justify-between gap-3">
             <div>
               <Pill tone="accent">Chuyển ví</Pill>
-              <p className="mt-2 text-sm font-semibold text-mjm-text">Tự nhận diện xong</p>
-              <p className="mt-1 text-sm leading-6 text-mjm-muted">Từ ví nguồn sang ví đích, không cần bấm phân tích.</p>
             </div>
             <MoneyText amount={liveParsed.amount} />
           </div>
@@ -272,8 +265,6 @@ export function QuickAddPage() {
         <div className="flex items-start justify-between gap-3">
           <div>
             <Pill tone={liveParsed.type === "thu" ? "income" : "expense"}>{liveParsed.type === "thu" ? "Thu" : "Chi"}</Pill>
-            <p className="mt-2 text-sm font-semibold text-mjm-text">Đã tự phân tích danh mục và hũ</p>
-            <p className="mt-1 text-sm leading-6 text-mjm-muted">Không cần bấm phân tích riêng. Chỉ cần nhập rồi lưu.</p>
           </div>
           <MoneyText amount={liveParsed.amount} type={liveParsed.type === "thu" ? "income" : "expense"} />
         </div>
@@ -301,7 +292,7 @@ export function QuickAddPage() {
 
   return (
     <div className="space-y-5 pb-28">
-      <PageHeader title="Nhập nhanh" subtitle="Tự nhận diện danh mục, hũ và ví trong một bước." />
+      <PageHeader title="Nhập nhanh" />
 
       <Surface className="space-y-4">
         <div className="grid grid-cols-3 gap-2">
@@ -331,20 +322,6 @@ export function QuickAddPage() {
 
       {mode === "text" ? (
         <Surface className="space-y-4">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <Pill tone="accent">Lưu luôn</Pill>
-              <p className="mt-2 font-display text-[1.25rem] font-semibold tracking-[-0.03em] text-mjm-text">
-                Nhập xong là lưu, app tự phân tích danh mục và hũ.
-              </p>
-              <p className="mt-2 text-sm leading-6 text-mjm-muted">Không cần bấm phân tích riêng hay kéo xuống thêm lần nữa.</p>
-            </div>
-            <div className="hidden rounded-[20px] border border-white/10 bg-white/[0.03] px-3 py-2 text-right sm:block">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-mjm-muted">Ví dụ</p>
-              <p className="text-sm text-mjm-text">cf 35k bank</p>
-            </div>
-          </div>
-
           <textarea
             ref={inputRef}
             className="min-h-[118px] w-full rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.025))] p-4 text-[15px] leading-7 text-mjm-text placeholder:text-mjm-muted shadow-[0_12px_40px_rgba(2,6,23,0.16)] outline-none transition focus:border-mjm-accent/50 focus:ring-4 focus:ring-mjm-accent/15"
@@ -390,14 +367,6 @@ export function QuickAddPage() {
 
       {mode === "transfer" ? (
         <Surface className="space-y-4">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <Pill tone="accent">Lưu luôn</Pill>
-              <p className="mt-2 font-display text-[1.25rem] font-semibold tracking-[-0.03em] text-mjm-text">Chuyển ví một chạm, không cần bấm phân tích.</p>
-              <p className="mt-2 text-sm leading-6 text-mjm-muted">Nhập xong là app tự nhận diện ví nguồn, ví đích và số tiền.</p>
-            </div>
-          </div>
-
           <textarea
             ref={inputRef}
             className="min-h-[118px] w-full rounded-[24px] border border-white/10 bg-white/[0.03] p-4 text-[15px] leading-7 text-mjm-text placeholder:text-mjm-muted outline-none transition focus:border-mjm-accent/50 focus:ring-4 focus:ring-mjm-accent/15"

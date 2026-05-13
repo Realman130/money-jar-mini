@@ -44,6 +44,38 @@ const chartLabelStyle = {
 
 const COLORS = ["#5b8cff", "#4ade80", "#ff7462", "#fbbf24", "#8b5cf6", "#ec4899", "#14b8a6"];
 
+function CategoryTooltip({
+  active,
+  payload
+}: {
+  active?: boolean;
+  payload?: Array<{
+    value?: number | string;
+    fill?: string;
+    color?: string;
+    payload?: { category_name?: string; total_amount?: number };
+  }>;
+}) {
+  if (!active || !payload?.length) {
+    return null;
+  }
+
+  const item = payload[0];
+  const categoryName = item.payload?.category_name ?? "Danh mục";
+  const amount = Number(item.value ?? item.payload?.total_amount ?? 0);
+  const dotColor = item.fill ?? item.color ?? "#5b8cff";
+
+  return (
+    <div className="rounded-[18px] border border-white/10 bg-[#0b111b]/95 px-3 py-2 shadow-[0_24px_60px_rgba(2,6,23,0.45)] backdrop-blur-xl">
+      <p className="text-sm font-semibold text-mjm-text">{categoryName}</p>
+      <div className="mt-2 flex items-center gap-2">
+        <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: dotColor }} />
+        <span className="text-sm font-semibold tabular-nums text-mjm-text">{formatVnd(amount)}</span>
+      </div>
+    </div>
+  );
+}
+
 export function ReportsPage() {
   const { telegramUserId, ready, error } = useApp();
   const [tab, setTab] = useState<"overview" | "category" | "jars" | "wallets">("overview");
@@ -291,12 +323,7 @@ export function ReportsPage() {
                   <CartesianGrid stroke="rgba(255,255,255,0.08)" strokeDasharray="3 3" />
                   <XAxis type="number" tick={chartLabelStyle} axisLine={false} tickLine={false} />
                   <YAxis type="category" dataKey="category_name" tick={chartLabelStyle} axisLine={false} tickLine={false} width={120} />
-                  <Tooltip
-                    formatter={(value: number) => formatVnd(value)}
-                    contentStyle={chartTooltipStyle}
-                    labelStyle={{ color: "#f4f7fb" }}
-                    cursor={{ fill: "rgba(91,140,255,0.08)" }}
-                  />
+                  <Tooltip content={<CategoryTooltip />} cursor={{ fill: "rgba(91,140,255,0.08)" }} />
                   <Bar dataKey="total_amount" radius={[0, 12, 12, 0]}>
                     {sortedCats.map((entry, index) => (
                       <Cell key={entry.category_name} fill={COLORS[index % COLORS.length]} />
