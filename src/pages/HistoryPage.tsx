@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { EmptyState } from "@/components/common/EmptyState";
 import { Loading } from "@/components/common/Loading";
 import { MoneyText } from "@/components/common/MoneyText";
+import { Surface, Pill, MetricCard, ProgressBar, SectionHeader } from "@/components/common/Fintech";
 import { useApp } from "@/context/AppContext";
 import { fetchTransactionsEnriched, softDeleteTransaction, updateTransaction } from "@/services/transaction.service";
 import { monthStart } from "@/lib/date";
@@ -19,6 +20,9 @@ type Row = {
   wallet_name_vi: string | null;
 };
 
+const fieldClass =
+  "w-full rounded-[18px] border border-white/10 bg-white/[0.03] px-4 py-3 text-mjm-text placeholder:text-mjm-muted outline-none transition focus:border-mjm-accent/50 focus:ring-4 focus:ring-mjm-accent/15";
+
 export function HistoryPage() {
   const { telegramUserId, ready, error, categories, wallets } = useApp();
   const [rows, setRows] = useState<Row[]>([]);
@@ -33,6 +37,8 @@ export function HistoryPage() {
   const [editType, setEditType] = useState<"thu" | "chi">("chi");
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [filter, setFilter] = useState<"all" | "thu" | "chi">("all");
+  const [query, setQuery] = useState("");
 
   useEffect(() => {
     if (!ready || !telegramUserId) {
@@ -60,6 +66,41 @@ export function HistoryPage() {
     setEditType(sel.type === "thu" ? "thu" : "chi");
   }, [sel]);
 
+  const catMap = useMemo(() => {
+    const map = new Map<string, (typeof categories)[number]>();
+    for (const c of categories) {
+      map.set(c.id, c);
+    }
+    return map;
+  }, [categories]);
+
+  const filteredRows = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return rows.filter((row) => {
+      if (filter !== "all" && row.type !== filter) {
+        return false;
+      }
+      if (!q) {
+        return true;
+      }
+      return [row.note, row.category_name, row.wallet_name_vi, row.transaction_date].some((value) => value?.toLowerCase().includes(q));
+    });
+  }, [rows, filter, query]);
+
+  const grouped = useMemo(() => {
+    const groups = new Map<string, Row[]>();
+    for (const row of filteredRows) {
+      if (!groups.has(row.transaction_date)) {
+        groups.set(row.transaction_date, []);
+      }
+      groups.get(row.transaction_date)!.push(row);
+    }
+    return [...groups.entries()].sort((a, b) => (a[0] < b[0] ? 1 : -1));
+  }, [filteredRows]);
+
+  const totalExpense = rows.filter((r) => r.type === "chi").reduce((sum, row) => sum + row.amount, 0);
+  const averageExpense = rows.filter((r) => r.type === "chi").length > 0 ? Math.round(totalExpense / rows.filter((r) => r.type === "chi").length) : 0;
+
   const openEdit = () => {
     setEditing(true);
   };
@@ -71,7 +112,7 @@ export function HistoryPage() {
     const amt = Number.parseInt(editAmount.replace(/\D/g, ""), 10);
     if (!Number.isFinite(amt) || amt <= 0) {
       setToast("Số tiền không hợp lệ");
-      setTimeout(() => setToast(null), 2000);
+      window.setTimeout(() => setToast(null), 2000);
       return;
     }
     const catId = editCat || null;
@@ -123,10 +164,10 @@ export function HistoryPage() {
       );
       setEditing(false);
       setToast("Đã cập nhật");
-      setTimeout(() => setToast(null), 2000);
+      window.setTimeout(() => setToast(null), 2000);
     } catch (e) {
       setToast(e instanceof Error ? e.message : String(e));
-      setTimeout(() => setToast(null), 3000);
+      window.setTimeout(() => setToast(null), 3000);
     } finally {
       setSaving(false);
     }
@@ -139,46 +180,113 @@ export function HistoryPage() {
     return <Loading />;
   }
 
-  const groups = new Map<string, Row[]>();
-  for (const r of rows) {
-    if (!groups.has(r.transaction_date)) {
-      groups.set(r.transaction_date, []);
-    }
-    groups.get(r.transaction_date)!.push(r);
-  }
-  const days = [...groups.keys()].sort((a, b) => (a < b ? 1 : -1));
-
-  const catsForType = categories.filter((c) => c.type === editType);
+  const rowsCount = rows.length;
+  const chiCount = rows.filter((r) => r.type === "chi").length;
+  const thuCount = rows.filter((r) => r.type === "thu").length;
+  const typeTone = filter === "thu" ? "income" : filter === "chi" ? "expense" : "accent";
 
   return (
-    <div>
-      <PageHeader title="Lịch sử" subtitle="Tháng này — bấm dòng để sửa / xóa" />
-      {rows.length === 0 ? (
-        <EmptyState title="Chưa có giao dịch" hint="Dùng Nhập nhanh để thêm." />
+    <div className="space-y-5">
+      <PageHeader title="Lịch sử" subtitle="Bấm một dòng để xem, sửa, hoặc xoá mềm." kicker="Timeline" />
+
+      <Surface className="space-y-4">
+        <SectionHeader
+          title="Dòng tiền tháng này"
+          subtitle="Một timeline ngắn gọn để scan giao dịch nhanh hơn."
+          action={<Pill tone={typeTone}>{filter === "all" ? "Tất cả" : filter === "thu" ? "Thu" : "Chi"}</Pill>}
+        />
+        <div className="grid grid-cols-3 gap-2">
+          <MetricCard label="Giao dịch" value={rowsCount.toLocaleString("vi-VN")} hint="Tổng số dòng" className="p-3" />
+          <MetricCard label="Thu" value={thuCount.toLocaleString("vi-VN")} tone="income" hint="Dòng thu" className="p-3" />
+          <MetricCard label="Chi" value={chiCount.toLocaleString("vi-VN")} tone="expense" hint="Dòng chi" className="p-3" />
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-[1.4fr_0.8fr]">
+          <label className="block">
+            <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-mjm-muted">Tìm kiếm</span>
+            <input
+              className={fieldClass}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Tìm theo ghi chú, danh mục, ví, ngày..."
+            />
+          </label>
+          <div className="grid grid-cols-3 gap-2 self-end">
+            {([
+              ["all", "Tất cả"],
+              ["chi", "Chi"],
+              ["thu", "Thu"]
+            ] as const).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setFilter(value)}
+                className={`rounded-[18px] border px-3 py-3 text-sm font-semibold transition ${
+                  filter === value
+                    ? "border-mjm-accent/30 bg-mjm-accent/16 text-white"
+                    : "border-white/10 bg-white/[0.03] text-mjm-muted hover:border-white/15 hover:bg-white/[0.05]"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-[20px] border border-white/8 bg-white/[0.03] p-4">
+          <div className="flex items-center justify-between gap-3 text-xs text-mjm-muted">
+            <span>Chi trung bình / dòng chi</span>
+            <span>{averageExpense.toLocaleString("vi-VN")} VND</span>
+          </div>
+          <ProgressBar value={rowsCount > 0 ? Math.min(100, (chiCount / rowsCount) * 100) : 0} tone="expense" className="mt-3" />
+        </div>
+      </Surface>
+
+      {filteredRows.length === 0 ? (
+        <EmptyState title="Không có giao dịch phù hợp" hint="Thử đổi bộ lọc hoặc từ khoá tìm kiếm." />
       ) : (
-        <div className="space-y-6">
-          {days.map((d) => (
-            <section key={d}>
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-mjm-muted">
-                {d.split("-").reverse().join("/")}
-              </h3>
+        <div className="space-y-5">
+          {grouped.map(([date, items]) => (
+            <section key={date} className="space-y-2">
+              <div className="flex items-center justify-between px-1">
+                <h3 className="text-xs font-semibold uppercase tracking-[0.24em] text-mjm-muted">{date.split("-").reverse().join("/")}</h3>
+                <span className="text-xs text-mjm-muted">{items.length} giao dịch</span>
+              </div>
               <div className="space-y-2">
-                {groups.get(d)!.map((r) => (
-                  <button
-                    key={r.id}
-                    type="button"
-                    onClick={() => setSel(r)}
-                    className="flex w-full items-center justify-between rounded-xl border border-mjm-border bg-mjm-surface px-3 py-2.5 text-left"
-                  >
-                    <div>
-                      <p className="text-sm font-medium text-mjm-text">
-                        {r.category_name ?? "—"} · {r.note || "—"}
-                      </p>
-                      <p className="text-xs text-mjm-muted">{r.wallet_name_vi ?? "—"}</p>
-                    </div>
-                    <MoneyText amount={r.amount} type={r.type === "thu" ? "income" : "expense"} signed={r.type === "thu"} />
-                  </button>
-                ))}
+                {items.map((row) => {
+                  const cat = row.category_id ? catMap.get(row.category_id) : null;
+                  const icon = cat?.icon ?? (row.type === "thu" ? "↗" : "↙");
+                  const iconBg = cat?.color ? `${cat.color}1A` : row.type === "thu" ? "rgba(74,222,128,0.12)" : "rgba(255,116,98,0.12)";
+                  const iconColor = cat?.color ?? (row.type === "thu" ? "var(--mjm-income)" : "var(--mjm-expense)");
+                  return (
+                    <button
+                      key={row.id}
+                      type="button"
+                      onClick={() => setSel(row)}
+                      className="group flex w-full items-center gap-3 rounded-[22px] border border-white/8 bg-white/[0.03] px-3 py-3 text-left transition duration-200 hover:-translate-y-0.5 hover:border-white/12 hover:bg-white/[0.05]"
+                    >
+                      <div
+                        className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-white/10 text-sm font-bold"
+                        style={{ backgroundColor: iconBg, color: iconColor }}
+                      >
+                        {icon}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate font-semibold text-mjm-text">{row.category_name ?? "Không danh mục"}</p>
+                            <p className="mt-1 truncate text-sm leading-6 text-mjm-muted">{row.note || "—"}</p>
+                          </div>
+                          <MoneyText amount={row.amount} type={row.type === "thu" ? "income" : "expense"} />
+                        </div>
+                        <div className="mt-2 flex items-center gap-2 text-xs text-mjm-muted">
+                          <Pill tone={row.type === "thu" ? "income" : "expense"}>{row.type === "thu" ? "Thu" : "Chi"}</Pill>
+                          <span>{row.wallet_name_vi ?? "—"}</span>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </section>
           ))}
@@ -186,125 +294,155 @@ export function HistoryPage() {
       )}
 
       {sel ? (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4" role="dialog">
-          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-mjm-surface p-4 shadow-xl">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/55 px-3 py-3 backdrop-blur-sm" role="dialog">
+          <div className="w-full max-w-[430px] overflow-hidden rounded-[32px] border border-white/10 bg-[#0c131f]/96 shadow-[0_30px_90px_rgba(2,6,23,0.55)]">
             {!editing ? (
-              <>
-                <p className="text-lg font-bold">
-                  <MoneyText amount={sel.amount} type={sel.type === "thu" ? "income" : "expense"} />
-                </p>
-                <p className="mt-2 text-sm text-mjm-muted">
-                  {sel.category_name} · {sel.wallet_name_vi}
-                </p>
-                <p className="mt-1 text-sm">{sel.note}</p>
-                <p className="mt-1 text-xs text-mjm-muted">{sel.transaction_date}</p>
-                <div className="mt-4 grid grid-cols-2 gap-2">
+              <div className="space-y-4 p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <Pill tone={sel.type === "thu" ? "income" : "expense"}>{sel.type === "thu" ? "Thu" : "Chi"}</Pill>
+                    <p className="mt-2 font-display text-[1.4rem] font-semibold tracking-[-0.04em] text-mjm-text">
+                      <MoneyText amount={sel.amount} type={sel.type === "thu" ? "income" : "expense"} />
+                    </p>
+                    <p className="mt-1 text-sm text-mjm-muted">{sel.transaction_date}</p>
+                  </div>
                   <button
                     type="button"
-                    className="rounded-xl border border-mjm-border py-2.5 text-sm font-semibold"
+                    className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-2 text-sm font-semibold text-mjm-text"
                     onClick={() => setSel(null)}
                   >
                     Đóng
                   </button>
-                  <button type="button" className="rounded-xl bg-mjm-accent py-2.5 text-sm font-semibold text-white" onClick={openEdit}>
+                </div>
+
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <div className="rounded-[18px] border border-white/10 bg-white/[0.03] p-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-mjm-muted">Danh mục</p>
+                    <p className="mt-1 font-semibold text-mjm-text">{sel.category_name ?? "—"}</p>
+                  </div>
+                  <div className="rounded-[18px] border border-white/10 bg-white/[0.03] p-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-mjm-muted">Ví</p>
+                    <p className="mt-1 font-semibold text-mjm-text">{sel.wallet_name_vi ?? "—"}</p>
+                  </div>
+                </div>
+
+                <div className="rounded-[20px] border border-white/10 bg-white/[0.03] p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-mjm-muted">Ghi chú</p>
+                  <p className="mt-2 text-sm leading-6 text-mjm-text">{sel.note || "—"}</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    className="rounded-[18px] bg-mjm-accent py-3.5 font-semibold text-white"
+                    onClick={openEdit}
+                  >
                     Sửa
                   </button>
                   <button
                     type="button"
-                    className="col-span-2 rounded-xl bg-mjm-danger/15 py-2.5 text-sm font-semibold text-mjm-danger"
+                    className="rounded-[18px] border border-mjm-danger/30 bg-mjm-danger/12 py-3.5 font-semibold text-mjm-danger"
                     onClick={async () => {
                       await softDeleteTransaction(sel.id);
                       setRows((prev) => prev.filter((x) => x.id !== sel.id));
                       setSel(null);
                     }}
                   >
-                    Xóa (mềm)
+                    Xoá mềm
                   </button>
                 </div>
-              </>
+              </div>
             ) : (
-              <div className="space-y-3">
-                <p className="font-semibold text-mjm-text">Sửa giao dịch</p>
-                <div className="flex gap-2">
+              <div className="space-y-4 p-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <Pill tone={editType === "thu" ? "income" : "expense"}>{editType === "thu" ? "Thu" : "Chi"}</Pill>
+                    <p className="mt-2 font-display text-[1.25rem] font-semibold tracking-[-0.04em] text-mjm-text">Sửa giao dịch</p>
+                  </div>
+                  <button
+                    type="button"
+                    className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-2 text-sm font-semibold text-mjm-text"
+                    onClick={() => setEditing(false)}
+                    disabled={saving}
+                  >
+                    Quay lại
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() => setEditType("chi")}
-                    className={`flex-1 rounded-lg py-2 text-sm font-semibold ${editType === "chi" ? "bg-mjm-expense/15 text-mjm-expense" : "border border-mjm-border"}`}
+                    className={`rounded-[18px] border px-4 py-3 font-semibold transition ${
+                      editType === "chi"
+                        ? "border-mjm-expense/30 bg-mjm-expense/14 text-mjm-expense"
+                        : "border-white/10 bg-white/[0.03] text-mjm-muted"
+                    }`}
                   >
                     Chi
                   </button>
                   <button
                     type="button"
                     onClick={() => setEditType("thu")}
-                    className={`flex-1 rounded-lg py-2 text-sm font-semibold ${editType === "thu" ? "bg-mjm-income/15 text-mjm-income" : "border border-mjm-border"}`}
+                    className={`rounded-[18px] border px-4 py-3 font-semibold transition ${
+                      editType === "thu"
+                        ? "border-mjm-income/30 bg-mjm-income/14 text-mjm-income"
+                        : "border-white/10 bg-white/[0.03] text-mjm-muted"
+                    }`}
                   >
                     Thu
                   </button>
                 </div>
-                <label className="block text-xs text-mjm-muted">Số tiền (VND)</label>
-                <input
-                  className="w-full rounded-xl border border-mjm-border bg-mjm-bg px-3 py-2 text-mjm-text"
-                  value={editAmount}
-                  onChange={(e) => setEditAmount(e.target.value)}
-                  inputMode="numeric"
-                />
-                <label className="block text-xs text-mjm-muted">Ngày</label>
-                <input
-                  type="date"
-                  className="w-full rounded-xl border border-mjm-border bg-mjm-bg px-3 py-2"
-                  value={editDate}
-                  onChange={(e) => setEditDate(e.target.value)}
-                />
-                <label className="block text-xs text-mjm-muted">Danh mục</label>
-                <select
-                  className="w-full rounded-xl border border-mjm-border bg-mjm-bg px-3 py-2 text-sm"
-                  value={editCat}
-                  onChange={(e) => setEditCat(e.target.value)}
+
+                <label className="block">
+                  <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-mjm-muted">Số tiền</span>
+                  <input className={fieldClass} value={editAmount} onChange={(e) => setEditAmount(e.target.value)} inputMode="numeric" />
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-mjm-muted">Ngày</span>
+                  <input type="date" className={fieldClass} value={editDate} onChange={(e) => setEditDate(e.target.value)} />
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-mjm-muted">Danh mục</span>
+                  <select className={fieldClass} value={editCat} onChange={(e) => setEditCat(e.target.value)}>
+                    <option value="">—</option>
+                    {categories
+                      .filter((c) => c.type === editType)
+                      .map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.parent_name} → {c.name}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-mjm-muted">Ví</span>
+                  <select className={fieldClass} value={editWallet} onChange={(e) => setEditWallet(e.target.value)}>
+                    <option value="">—</option>
+                    {wallets.map((w) => (
+                      <option key={w.id} value={w.id}>
+                        {w.name_vi}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-mjm-muted">Ghi chú</span>
+                  <input className={fieldClass} value={editNote} onChange={(e) => setEditNote(e.target.value)} />
+                </label>
+
+                <button
+                  type="button"
+                  className="w-full rounded-[18px] bg-mjm-accent py-3.5 font-semibold text-white disabled:opacity-60"
+                  onClick={() => void saveEdit()}
+                  disabled={saving}
                 >
-                  <option value="">—</option>
-                  {catsForType.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.parent_name} → {c.name}
-                    </option>
-                  ))}
-                </select>
-                <label className="block text-xs text-mjm-muted">Ví</label>
-                <select
-                  className="w-full rounded-xl border border-mjm-border bg-mjm-bg px-3 py-2 text-sm"
-                  value={editWallet}
-                  onChange={(e) => setEditWallet(e.target.value)}
-                >
-                  <option value="">—</option>
-                  {wallets.map((w) => (
-                    <option key={w.id} value={w.id}>
-                      {w.name_vi}
-                    </option>
-                  ))}
-                </select>
-                <label className="block text-xs text-mjm-muted">Ghi chú</label>
-                <input
-                  className="w-full rounded-xl border border-mjm-border bg-mjm-bg px-3 py-2"
-                  value={editNote}
-                  onChange={(e) => setEditNote(e.target.value)}
-                />
-                <div className="flex gap-2 pt-2">
-                  <button
-                    type="button"
-                    className="flex-1 rounded-xl border border-mjm-border py-2.5 text-sm font-semibold"
-                    onClick={() => setEditing(false)}
-                    disabled={saving}
-                  >
-                    Hủy sửa
-                  </button>
-                  <button
-                    type="button"
-                    className="flex-1 rounded-xl bg-mjm-accent py-2.5 text-sm font-semibold text-white"
-                    onClick={() => void saveEdit()}
-                    disabled={saving}
-                  >
-                    {saving ? "…" : "Lưu"}
-                  </button>
-                </div>
+                  {saving ? "Đang lưu…" : "Lưu thay đổi"}
+                </button>
               </div>
             )}
           </div>
@@ -312,7 +450,7 @@ export function HistoryPage() {
       ) : null}
 
       {toast ? (
-        <div className="fixed bottom-24 left-1/2 z-[60] -translate-x-1/2 rounded-full bg-mjm-text px-4 py-2 text-sm text-mjm-surface shadow-lg">
+        <div className="fixed bottom-24 left-1/2 z-[60] -translate-x-1/2 rounded-full border border-white/10 bg-[#0d1420]/95 px-4 py-2 text-sm font-medium text-mjm-text shadow-[0_20px_50px_rgba(2,6,23,0.45)] backdrop-blur-2xl">
           {toast}
         </div>
       ) : null}

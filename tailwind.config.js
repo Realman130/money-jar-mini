@@ -19,7 +19,8 @@ export default {
         }
       },
       fontFamily: {
-        sans: ["system-ui", "Segoe UI", "Roboto", "sans-serif"]
+        sans: ["Manrope", "ui-sans-serif", "system-ui", "sans-serif"],
+        display: ["Space Grotesk", "Manrope", "ui-sans-serif", "system-ui", "sans-serif"]
       }
     }
   },

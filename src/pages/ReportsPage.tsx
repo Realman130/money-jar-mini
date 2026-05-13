@@ -1,12 +1,4 @@
-import { useEffect, useState } from "react";
-import { PageHeader } from "@/components/layout/PageHeader";
-import { EmptyState } from "@/components/common/EmptyState";
-import { Loading } from "@/components/common/Loading";
-import { MoneyText } from "@/components/common/MoneyText";
-import { useApp } from "@/context/AppContext";
-import { monthEndDate } from "@/lib/date";
-import { currentMonthStart, getDailyFlow, getExpenseByCategory, getExpenseByJar, getMonthlySummary } from "@/services/report.service";
-import { fetchWalletBalances } from "@/services/wallet.service";
+import { useEffect, useMemo, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -14,15 +6,43 @@ import {
   Cell,
   Line,
   LineChart,
-  Pie,
-  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis
 } from "recharts";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { EmptyState } from "@/components/common/EmptyState";
+import { Loading } from "@/components/common/Loading";
+import { MoneyText } from "@/components/common/MoneyText";
+import { Pill, ProgressBar, SectionHeader, Surface } from "@/components/common/Fintech";
+import { useApp } from "@/context/AppContext";
+import { monthEndDate } from "@/lib/date";
+import {
+  currentMonthStart,
+  getDailyFlow,
+  getExpenseByCategory,
+  getExpenseByJar,
+  getMonthlyIncomePlan,
+  getMonthlySummary
+} from "@/services/report.service";
+import { fetchWalletBalances } from "@/services/wallet.service";
+import { formatVnd } from "@/lib/money";
 
-const COLORS = ["#2563eb", "#16a34a", "#dc2626", "#d97706", "#9333ea", "#ec4899", "#14b8a6"];
+const chartTooltipStyle = {
+  backgroundColor: "#0c131f",
+  border: "1px solid rgba(255,255,255,0.1)",
+  borderRadius: 16,
+  color: "#f4f7fb",
+  boxShadow: "0 24px 60px rgba(2,6,23,0.45)"
+};
+
+const chartLabelStyle = {
+  fill: "#94a3b8",
+  fontSize: 11
+};
+
+const COLORS = ["#5b8cff", "#4ade80", "#ff7462", "#fbbf24", "#8b5cf6", "#ec4899", "#14b8a6"];
 
 export function ReportsPage() {
   const { telegramUserId, ready, error } = useApp();
@@ -32,8 +52,9 @@ export function ReportsPage() {
   const [summary, setSummary] = useState<{ total_income: number; total_expense: number; net_amount: number } | null>(null);
   const [daily, setDaily] = useState<{ transaction_date: string; total_expense: number; total_income: number }[]>([]);
   const [byCat, setByCat] = useState<{ category_name: string; total_amount: number }[]>([]);
-  const [byJar, setByJar] = useState<{ jar_name_vi: string; actual_amount: number }[]>([]);
-  const [wbal, setWbal] = useState<{ name_vi: string; current_balance: number }[]>([]);
+  const [byJar, setByJar] = useState<{ jar_name_vi: string; actual_amount: number; jar_code?: string; target_percent: number | null }[]>([]);
+  const [wbal, setWbal] = useState<{ name_vi: string; current_balance: number; code?: string; kind?: string }[]>([]);
+  const [incomePlan, setIncomePlan] = useState<number>(0);
 
   useEffect(() => {
     if (!ready || !telegramUserId) {
@@ -46,9 +67,10 @@ export function ReportsPage() {
       getDailyFlow(telegramUserId, month, end),
       getExpenseByCategory(telegramUserId, month),
       getExpenseByJar(telegramUserId, month),
-      fetchWalletBalances(telegramUserId)
+      fetchWalletBalances(telegramUserId),
+      getMonthlyIncomePlan(telegramUserId, month)
     ])
-      .then(([s, d, c, j, w]) => {
+      .then(([s, d, c, j, w, p]) => {
         setSummary(
           s
             ? {
@@ -71,27 +93,55 @@ export function ReportsPage() {
             .map((x) => ({ ...x, total_amount: Number(x.total_amount) }))
         );
         setByJar(
-          (j as { jar_name_vi: string; actual_amount: number }[]).map((x) => ({
+          (j as { jar_name_vi: string; actual_amount: number; jar_code?: string; target_percent: number | null }[]).map((x) => ({
             ...x,
-            actual_amount: Number(x.actual_amount)
+            actual_amount: Number(x.actual_amount),
+            target_percent: x.target_percent != null ? Number(x.target_percent) : null
           }))
         );
         setWbal(
-          (w as { name_vi: string; current_balance: number }[]).map((x) => ({
-            name_vi: x.name_vi,
+          (w as { name_vi: string; current_balance: number; code?: string; kind?: string }[]).map((x) => ({
+            ...x,
             current_balance: Number(x.current_balance)
           }))
         );
+        setIncomePlan(p ? Number(p.expected_income) : 0);
       })
       .finally(() => setLoading(false));
   }, [ready, telegramUserId, month]);
 
-  if (!ready || error || !telegramUserId) {
-    return <EmptyState title="Chưa kết nối" hint={error ?? ""} />;
-  }
-  if (loading) {
-    return <Loading />;
-  }
+  const dailyChart = useMemo(
+    () =>
+      daily
+        .map((d) => ({
+          day: d.transaction_date.slice(8),
+          total_expense: d.total_expense,
+          total_income: d.total_income
+        }))
+        .sort((a, b) => Number(a.day) - Number(b.day)),
+    [daily]
+  );
+
+  const cumulative = useMemo(() => {
+    let running = 0;
+    return dailyChart.map((d) => {
+      running += d.total_expense;
+      return { day: d.day, value: running };
+    });
+  }, [dailyChart]);
+
+  const sortedCats = useMemo(() => byCat.slice().sort((a, b) => b.total_amount - a.total_amount), [byCat]);
+
+  const totalExpense = summary?.total_expense ?? 0;
+  const totalIncome = summary?.total_income ?? 0;
+  const net = summary?.net_amount ?? 0;
+  const plannedIncome = incomePlan > 0 ? incomePlan : totalIncome;
+  const burnRate = plannedIncome > 0 ? Math.min(100, (totalExpense / plannedIncome) * 100) : 0;
+  const daysInMonth = new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0).getDate();
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" });
+  const dayNum = Number(today.slice(8, 10));
+  const avgExpense = dayNum > 0 ? Math.round(totalExpense / dayNum) : 0;
+  const projected = dayNum > 0 ? Math.round((totalExpense / dayNum) * daysInMonth) : 0;
 
   const tabs = [
     { id: "overview" as const, label: "Tổng quan" },
@@ -100,26 +150,34 @@ export function ReportsPage() {
     { id: "wallets" as const, label: "Ví" }
   ];
 
-  let cum = 0;
-  const cumLine = daily
-    .slice()
-    .sort((a, b) => (a.transaction_date < b.transaction_date ? -1 : 1))
-    .map((d) => {
-      cum += d.total_expense;
-      return { day: d.transaction_date.slice(8), cum };
-    });
+  if (!ready || error || !telegramUserId) {
+    return <EmptyState title="Chưa kết nối" hint={error ?? ""} />;
+  }
+  if (loading) {
+    return <Loading />;
+  }
+
+  const peakDay = dailyChart.reduce<{ day: string; expense: number } | null>((best, item) => {
+    if (!best || item.total_expense > best.expense) {
+      return { day: item.day, expense: item.total_expense };
+    }
+    return best;
+  }, null);
 
   return (
-    <div>
-      <PageHeader title="Báo cáo" subtitle={month} />
-      <div className="mb-4 flex gap-1 overflow-x-auto pb-1">
+    <div className="space-y-5">
+      <PageHeader title="Báo cáo" subtitle={month} kicker="Analytics" />
+
+      <div className="flex gap-2 overflow-x-auto pb-1">
         {tabs.map((t) => (
           <button
             key={t.id}
             type="button"
             onClick={() => setTab(t.id)}
-            className={`whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold ${
-              tab === t.id ? "bg-mjm-accent text-white" : "bg-mjm-surface text-mjm-muted border border-mjm-border"
+            className={`whitespace-nowrap rounded-full border px-4 py-2 text-sm font-semibold transition ${
+              tab === t.id
+                ? "border-mjm-accent/30 bg-mjm-accent/16 text-white"
+                : "border-white/10 bg-white/[0.03] text-mjm-muted hover:border-white/15 hover:bg-white/[0.05]"
             }`}
           >
             {t.label}
@@ -129,78 +187,206 @@ export function ReportsPage() {
 
       {tab === "overview" && summary ? (
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-2 rounded-2xl border border-mjm-border bg-mjm-surface p-3 text-sm">
-            <div>
-              <p className="text-mjm-muted">Thu</p>
-              <MoneyText amount={summary.total_income} type="income" />
+          <Surface className="space-y-4">
+            <SectionHeader title="Tình hình tháng" subtitle="Cân bằng thu chi và mức tiêu hao so với quỹ dự kiến." />
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <div className="rounded-[20px] border border-white/8 bg-white/[0.03] p-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-mjm-muted">Thu</p>
+                <div className="mt-2 whitespace-nowrap text-[0.82rem] font-semibold tabular-nums tracking-[-0.04em] text-mjm-income sm:text-[0.9rem]">
+                  {formatVnd(totalIncome)}
+                </div>
+              </div>
+              <div className="rounded-[20px] border border-white/8 bg-white/[0.03] p-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-mjm-muted">Chi</p>
+                <div className="mt-2 whitespace-nowrap text-[0.82rem] font-semibold tabular-nums tracking-[-0.04em] text-mjm-expense sm:text-[0.9rem]">
+                  {formatVnd(totalExpense)}
+                </div>
+              </div>
+              <div className="rounded-[20px] border border-white/8 bg-white/[0.03] p-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-mjm-muted">Dư</p>
+                <div className={`mt-2 whitespace-nowrap text-[0.82rem] font-semibold tabular-nums tracking-[-0.04em] ${net >= 0 ? "text-mjm-income" : "text-mjm-expense"} sm:text-[0.9rem]`}>
+                  {net >= 0 ? "+" : "-"}
+                  {formatVnd(Math.abs(net))}
+                </div>
+              </div>
+              <div className="rounded-[20px] border border-white/8 bg-white/[0.03] p-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-mjm-muted">Kế hoạch</p>
+                <div className="mt-2 whitespace-nowrap text-[0.82rem] font-semibold tracking-[-0.04em] text-mjm-accent sm:text-[0.9rem]">
+                  {plannedIncome > 0 ? formatVnd(plannedIncome) : "—"}
+                </div>
+                <p className="mt-1 text-xs text-mjm-muted">Thu nhập dự kiến</p>
+              </div>
             </div>
-            <div>
-              <p className="text-mjm-muted">Chi</p>
-              <MoneyText amount={summary.total_expense} type="expense" />
+            <div className="rounded-[20px] border border-white/10 bg-white/[0.03] p-4">
+              <div className="flex items-center justify-between gap-3 text-xs text-mjm-muted">
+                <span>Tốc độ chi</span>
+                <span>
+                  {formatVnd(avgExpense)} / ngày · Dự kiến {formatVnd(projected)}
+                </span>
+              </div>
+              <ProgressBar value={burnRate} tone={projected > plannedIncome ? "expense" : projected > plannedIncome * 0.9 ? "warn" : "income"} className="mt-3 h-3" />
             </div>
-          </div>
-          <div className="h-56 rounded-2xl border border-mjm-border bg-mjm-surface p-2">
-            <p className="px-2 pt-2 text-xs font-medium text-mjm-muted">Chi theo ngày</p>
-            <ResponsiveContainer width="100%" height="90%">
-              <BarChart data={daily.map((d) => ({ ...d, day: d.transaction_date.slice(8) }))}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#33415540" />
-                <XAxis dataKey="day" tick={{ fontSize: 10 }} />
-                <YAxis tick={{ fontSize: 10 }} width={40} />
-                <Tooltip formatter={(v: number) => v.toLocaleString("vi-VN")} />
-                <Bar dataKey="total_expense" fill="#dc2626" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="h-56 rounded-2xl border border-mjm-border bg-mjm-surface p-2">
-            <p className="px-2 pt-2 text-xs font-medium text-mjm-muted">Chi lũy kế</p>
-            <ResponsiveContainer width="100%" height="90%">
-              <LineChart data={cumLine}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#33415540" />
-                <XAxis dataKey="day" tick={{ fontSize: 10 }} />
-                <YAxis tick={{ fontSize: 10 }} width={40} />
-                <Tooltip formatter={(v: number) => v.toLocaleString("vi-VN")} />
-                <Line type="monotone" dataKey="cum" stroke="#2563eb" strokeWidth={2} dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
+          </Surface>
+
+          <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+            <Surface className="space-y-3">
+              <SectionHeader title="Chi và thu theo ngày" subtitle="Tháng này hiển thị theo từng ngày để thấy nhịp tiền." />
+              <div className="h-72 overflow-hidden rounded-[22px] border border-white/10 bg-black/10 p-2">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={dailyChart}>
+                    <CartesianGrid stroke="rgba(255,255,255,0.08)" strokeDasharray="3 3" />
+                    <XAxis dataKey="day" tick={chartLabelStyle} axisLine={false} tickLine={false} />
+                    <YAxis tick={chartLabelStyle} axisLine={false} tickLine={false} width={44} />
+                    <Tooltip
+                      formatter={(value: number, name: string) => [formatVnd(value), name === "total_income" ? "Thu" : "Chi"]}
+                      contentStyle={chartTooltipStyle}
+                      labelStyle={{ color: "#f4f7fb" }}
+                      cursor={{ fill: "rgba(91,140,255,0.08)" }}
+                    />
+                    <Bar dataKey="total_income" fill="#4ade80" radius={[10, 10, 0, 0]} />
+                    <Bar dataKey="total_expense" fill="#ff7462" radius={[10, 10, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </Surface>
+
+            <Surface className="space-y-3">
+              <SectionHeader title="Chi lũy kế" subtitle="Theo dõi tốc độ cộng dồn để nhìn ra những cú bứt chi." />
+              <div className="h-72 overflow-hidden rounded-[22px] border border-white/10 bg-black/10 p-2">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={cumulative}>
+                    <CartesianGrid stroke="rgba(255,255,255,0.08)" strokeDasharray="3 3" />
+                    <XAxis dataKey="day" tick={chartLabelStyle} axisLine={false} tickLine={false} />
+                    <YAxis tick={chartLabelStyle} axisLine={false} tickLine={false} width={44} />
+                    <Tooltip
+                      formatter={(value: number) => formatVnd(value)}
+                      contentStyle={chartTooltipStyle}
+                      labelStyle={{ color: "#f4f7fb" }}
+                      cursor={{ stroke: "rgba(91,140,255,0.18)" }}
+                    />
+                    <Line type="monotone" dataKey="value" stroke="#5b8cff" strokeWidth={3} dot={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="rounded-[20px] border border-white/10 bg-white/[0.03] p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-mjm-muted">Điểm nhấn</p>
+                <p className="mt-2 text-sm leading-6 text-mjm-text">
+                  {peakDay
+                    ? `Ngày ${peakDay.day} là ngày chi mạnh nhất với ${formatVnd(peakDay.expense)}.`
+                    : "Chưa có dữ liệu chi tiêu để xác định ngày cao điểm."}
+                </p>
+              </div>
+            </Surface>
           </div>
         </div>
       ) : null}
 
       {tab === "category" ? (
-        <div className="h-72 rounded-2xl border border-mjm-border bg-mjm-surface p-2">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie data={byCat} dataKey="total_amount" nameKey="category_name" cx="50%" cy="50%" outerRadius={80}>
-                {byCat.map((_, i) => (
-                  <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip formatter={(v: number) => v.toLocaleString("vi-VN")} />
-            </PieChart>
-          </ResponsiveContainer>
+        <div className="space-y-4">
+          <Surface className="space-y-3">
+            <SectionHeader title="Chi theo danh mục" subtitle="Bar chart dễ scan hơn pie chart trên mobile." />
+            <div className="h-72 overflow-hidden rounded-[22px] border border-white/10 bg-black/10 p-2">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={sortedCats} layout="vertical" margin={{ left: 12, right: 20 }}>
+                  <CartesianGrid stroke="rgba(255,255,255,0.08)" strokeDasharray="3 3" />
+                  <XAxis type="number" tick={chartLabelStyle} axisLine={false} tickLine={false} />
+                  <YAxis type="category" dataKey="category_name" tick={chartLabelStyle} axisLine={false} tickLine={false} width={120} />
+                  <Tooltip
+                    formatter={(value: number) => formatVnd(value)}
+                    contentStyle={chartTooltipStyle}
+                    labelStyle={{ color: "#f4f7fb" }}
+                    cursor={{ fill: "rgba(91,140,255,0.08)" }}
+                  />
+                  <Bar dataKey="total_amount" radius={[0, 12, 12, 0]}>
+                    {sortedCats.map((entry, index) => (
+                      <Cell key={entry.category_name} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </Surface>
+
+          <Surface className="space-y-3">
+            <SectionHeader title="Xếp hạng" subtitle="10 danh mục chi nhiều nhất trong tháng." />
+            <div className="space-y-3">
+              {sortedCats.map((item, index) => {
+                const share = totalExpense > 0 ? (item.total_amount / totalExpense) * 100 : 0;
+                return (
+                  <div key={item.category_name} className="rounded-[20px] border border-white/8 bg-white/[0.03] p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-mjm-muted">#{index + 1}</p>
+                        <p className="mt-1 truncate font-semibold text-mjm-text">{item.category_name}</p>
+                      </div>
+                      <MoneyText amount={item.total_amount} type="expense" />
+                    </div>
+                    <ProgressBar value={share} tone="expense" className="mt-3" />
+                  </div>
+                );
+              })}
+            </div>
+          </Surface>
         </div>
       ) : null}
 
       {tab === "jars" ? (
-        <div className="space-y-2">
-          {byJar.map((j) => (
-            <div key={j.jar_name_vi} className="flex justify-between rounded-xl border border-mjm-border bg-mjm-surface px-3 py-2">
-              <span className="text-sm">{j.jar_name_vi}</span>
-              <MoneyText amount={j.actual_amount} type="expense" />
-            </div>
-          ))}
-        </div>
+        <Surface className="space-y-3">
+          <SectionHeader title="6 hũ" subtitle="Tỷ lệ thực chi so với quỹ dự kiến theo thu nhập." />
+          <div className="space-y-3">
+            {byJar.map((j) => {
+              const percent = j.target_percent ?? 10;
+              const budget = plannedIncome > 0 ? Math.round((plannedIncome * percent) / 100) : 0;
+              const usedPct = budget > 0 ? (j.actual_amount / budget) * 100 : j.actual_amount > 0 ? 100 : 0;
+              const tone = usedPct >= 100 ? "expense" : usedPct >= 80 ? "warn" : "accent";
+              return (
+                <div key={j.jar_name_vi} className="rounded-[20px] border border-white/8 bg-white/[0.03] p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-semibold text-mjm-text">{j.jar_name_vi}</p>
+                      <p className="mt-1 text-xs text-mjm-muted">
+                        Đã chi {formatVnd(j.actual_amount)}
+                        {budget > 0 ? ` / kế hoạch ${formatVnd(budget)}` : ""}
+                      </p>
+                    </div>
+                    <Pill tone={tone}>{Math.round(Math.min(100, usedPct))}%</Pill>
+                  </div>
+                  <ProgressBar value={usedPct} tone={tone} className="mt-3" />
+                </div>
+              );
+            })}
+          </div>
+        </Surface>
       ) : null}
 
       {tab === "wallets" ? (
-        <div className="space-y-2">
-          {wbal.map((w) => (
-            <div key={w.name_vi} className="flex justify-between rounded-xl border border-mjm-border bg-mjm-surface px-3 py-2">
-              <span className="text-sm">{w.name_vi}</span>
-              <MoneyText amount={w.current_balance} />
-            </div>
-          ))}
-        </div>
+        <Surface className="space-y-3">
+          <SectionHeader title="Ví" subtitle="Phân bổ số dư và mức độ ưu tiên hiện tại." />
+          <div className="rounded-[20px] border border-white/8 bg-white/[0.03] p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-mjm-muted">Tổng tài sản</p>
+            <p className="mt-2 font-display text-[2rem] font-semibold tracking-[-0.05em] text-mjm-text">
+              <MoneyText amount={wbal.reduce((sum, row) => sum + row.current_balance, 0)} />
+            </p>
+          </div>
+          <div className="space-y-3">
+            {wbal.map((w) => {
+              const total = wbal.reduce((sum, row) => sum + row.current_balance, 0);
+              const share = total > 0 ? (w.current_balance / total) * 100 : 0;
+              return (
+                <div key={w.name_vi} className="rounded-[20px] border border-white/8 bg-white/[0.03] p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-semibold text-mjm-text">{w.name_vi}</p>
+                      <p className="mt-1 text-xs text-mjm-muted">{w.kind ?? w.code ?? "Ví"}</p>
+                    </div>
+                    <MoneyText amount={w.current_balance} />
+                  </div>
+                  <ProgressBar value={share} tone="accent" className="mt-3" />
+                </div>
+              );
+            })}
+          </div>
+        </Surface>
       ) : null}
     </div>
   );

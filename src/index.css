@@ -1,31 +1,33 @@
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --mjm-bg: #f8fafc;
+  --mjm-bg: #eef2ff;
   --mjm-surface: #ffffff;
-  --mjm-border: #e2e8f0;
+  --mjm-border: #d5def0;
   --mjm-text: #0f172a;
-  --mjm-muted: #64748b;
-  --mjm-income: #16a34a;
-  --mjm-expense: #dc2626;
+  --mjm-muted: #5b6b84;
+  --mjm-income: #0f9d58;
+  --mjm-expense: #e24b4b;
   --mjm-accent: #2563eb;
   --mjm-warn: #d97706;
-  --mjm-danger: #b91c1c;
+  --mjm-danger: #c73a3a;
 }
 
 .dark {
-  --mjm-bg: #0f172a;
-  --mjm-surface: #1e293b;
-  --mjm-border: #334155;
-  --mjm-text: #f1f5f9;
+  --mjm-bg: #0a1018;
+  --mjm-surface: #111827;
+  --mjm-border: #273244;
+  --mjm-text: #f4f7fb;
   --mjm-muted: #94a3b8;
   --mjm-income: #4ade80;
-  --mjm-expense: #f87171;
-  --mjm-accent: #60a5fa;
+  --mjm-expense: #ff7462;
+  --mjm-accent: #5b8cff;
   --mjm-warn: #fbbf24;
-  --mjm-danger: #f87171;
+  --mjm-danger: #ff7462;
 }
 
 html,
@@ -35,8 +37,65 @@ body,
   min-height: 100dvh;
 }
 
+html.dark {
+  color-scheme: dark;
+}
+
+html:not(.dark) {
+  color-scheme: light;
+}
+
 body {
+  margin: 0;
+  overflow-x: hidden;
+  font-family: "Manrope", "ui-sans-serif", system-ui, sans-serif;
   -webkit-tap-highlight-color: transparent;
+  color: var(--mjm-text);
+  background:
+    radial-gradient(circle at top left, rgba(91, 140, 255, 0.18), transparent 32%),
+    radial-gradient(circle at top right, rgba(74, 222, 128, 0.09), transparent 28%),
+    linear-gradient(180deg, var(--mjm-bg) 0%, var(--mjm-bg) 100%);
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 24px 24px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.55), transparent 85%);
+  opacity: 0.45;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::selection {
+  color: #f8fafc;
+  background: rgba(91, 140, 255, 0.28);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  background: rgba(148, 163, 184, 0.28);
+  border-radius: 999px;
+}
+
+input,
+textarea,
+select,
+button {
+  font: inherit;
 }
 
 .safe-pb {

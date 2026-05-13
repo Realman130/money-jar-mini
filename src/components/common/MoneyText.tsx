@@ -11,5 +11,5 @@ export function MoneyText({
 }) {
   const cls =
     type === "income" ? "text-mjm-income" : type === "expense" ? "text-mjm-expense" : "text-mjm-text";
-  return <span className={`font-semibold tabular-nums ${cls}`}>{formatVnd(amount, { signed })}</span>;
+  return <span className={`font-semibold tabular-nums tracking-[-0.02em] ${cls}`}>{formatVnd(amount, { signed })}</span>;
 }
