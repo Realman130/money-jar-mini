@@ -105,6 +105,11 @@ export function HistoryPage() {
     setEditing(true);
   };
 
+  const closeSheet = () => {
+    setEditing(false);
+    setSel(null);
+  };
+
   const saveEdit = async () => {
     if (!sel || !telegramUserId) {
       return;
@@ -294,8 +299,20 @@ export function HistoryPage() {
       )}
 
       {sel ? (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/55 px-3 py-3 backdrop-blur-sm" role="dialog">
-          <div className="w-full max-w-[430px] overflow-hidden rounded-[32px] border border-white/10 bg-[#0c131f]/96 shadow-[0_30px_90px_rgba(2,6,23,0.55)]">
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/55 px-3 py-3 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          onPointerDown={(e) => {
+            if (e.target === e.currentTarget) {
+              closeSheet();
+            }
+          }}
+        >
+          <div
+            className="w-full max-w-[430px] overflow-hidden rounded-[32px] border border-white/10 bg-[#0c131f]/96 shadow-[0_30px_90px_rgba(2,6,23,0.55)]"
+            onPointerDown={(e) => e.stopPropagation()}
+          >
             {!editing ? (
               <div className="space-y-4 p-4">
                 <div className="flex items-start justify-between gap-4">
@@ -309,7 +326,7 @@ export function HistoryPage() {
                   <button
                     type="button"
                     className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-2 text-sm font-semibold text-mjm-text"
-                    onClick={() => setSel(null)}
+                    onClick={closeSheet}
                   >
                     Đóng
                   </button>
@@ -362,7 +379,7 @@ export function HistoryPage() {
                   <button
                     type="button"
                     className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-2 text-sm font-semibold text-mjm-text"
-                    onClick={() => setEditing(false)}
+                    onClick={closeSheet}
                     disabled={saving}
                   >
                     Quay lại
