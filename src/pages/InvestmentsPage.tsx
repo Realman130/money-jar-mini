@@ -14,6 +14,7 @@ import {
 } from "@/lib/crypto";
 import { useApp } from "@/context/AppContext";
 import { deleteInvestmentPosition, fetchInvestmentOverview, saveInvestmentPosition } from "@/services/investment.service";
+import { useForegroundRefresh } from "@/hooks/useForegroundRefresh";
 import type { InvestmentPortfolioOverview, InvestmentPositionSnapshot } from "@/types/domain";
 
 const QUICK_ASSETS = [
@@ -65,6 +66,21 @@ export function InvestmentsPage() {
     setPageError(null);
   };
 
+  const loadPortfolio = async (uid: number, options?: { withLoading?: boolean }) => {
+    try {
+      if (options?.withLoading) {
+        setLoading(true);
+      }
+      await refresh(uid);
+    } catch (e) {
+      setPageError(formatErrorMessage(e));
+    } finally {
+      if (options?.withLoading) {
+        setLoading(false);
+      }
+    }
+  };
+
   useEffect(() => {
     if (!ready || !telegramUserId) {
       setLoading(false);
@@ -73,22 +89,9 @@ export function InvestmentsPage() {
     let cancelled = false;
 
     (async () => {
-      try {
-        setLoading(true);
-        const data = await fetchInvestmentOverview(telegramUserId);
-        if (cancelled) {
-          return;
-        }
-        setPortfolio(data);
-        setPageError(null);
-      } catch (e) {
-        if (!cancelled) {
-          setPageError(formatErrorMessage(e));
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+      await loadPortfolio(telegramUserId, { withLoading: true });
+      if (cancelled) {
+        return;
       }
     })();
 
@@ -96,6 +99,16 @@ export function InvestmentsPage() {
       cancelled = true;
     };
   }, [ready, telegramUserId]);
+
+  useForegroundRefresh(
+    async () => {
+      if (!telegramUserId) {
+        return;
+      }
+      await loadPortfolio(telegramUserId);
+    },
+    ready && Boolean(telegramUserId)
+  );
 
   const previewSymbol = useMemo(() => normalizeInvestmentSymbol(form.assetCode), [form.assetCode]);
   const rate = DEFAULT_USDT_VND_RATE;

@@ -19,6 +19,7 @@ import {
 import { fetchInvestmentOverview } from "@/services/investment.service";
 import { fetchWalletBalances } from "@/services/wallet.service";
 import { MetricCard, Pill, ProgressBar, SectionHeader, Surface } from "@/components/common/Fintech";
+import { useForegroundRefresh } from "@/hooks/useForegroundRefresh";
 
 export function DashboardPage() {
   const { telegramUserId, ready, error, categories } = useApp();
@@ -66,6 +67,86 @@ export function DashboardPage() {
     updated_at: string;
   } | null>(null);
 
+  const loadDashboard = async (uid: number, options?: { withLoading?: boolean }) => {
+    try {
+      if (options?.withLoading) {
+        setLoading(true);
+      }
+      const [sum, bal, cat, jar, plan, jars, port] = await Promise.all([
+        getMonthlySummary(uid, month),
+        fetchWalletBalances(uid),
+        getExpenseByCategory(uid, month),
+        getExpenseByJar(uid, month),
+        getMonthlyIncomePlan(uid, month),
+        getJars(),
+        fetchInvestmentOverview(uid).catch((e) => ({
+          positions: [],
+          summary: {
+            total_positions: 0,
+            total_quantity: 0,
+            total_cost_usdt: 0,
+            total_market_value_usdt: 0,
+            net_pnl_usdt: 0,
+            net_pnl_percent: null,
+            pnl_24h_usdt: 0
+          },
+          quote_warning: formatErrorMessage(e),
+          updated_at: new Date().toISOString()
+        }))
+      ]);
+
+      setSummary(
+        sum
+          ? {
+              total_income: Number(sum.total_income),
+              total_expense: Number(sum.total_expense),
+              net_amount: Number(sum.net_amount),
+              saving_rate_percent: sum.saving_rate_percent != null ? Number(sum.saving_rate_percent) : null
+            }
+          : { total_income: 0, total_expense: 0, net_amount: 0, saving_rate_percent: null }
+      );
+      setBalances(
+        (bal as { name_vi: string; current_balance: number; code: string; kind?: string }[]).map((b) => ({
+          name_vi: b.name_vi,
+          current_balance: Number(b.current_balance),
+          code: b.code,
+          kind: b.kind
+        }))
+      );
+      setTopCat(
+        (cat as { category_name: string; parent_name: string; total_amount: number }[])
+          .slice(0, 5)
+          .map((c) => ({
+            ...c,
+            total_amount: Number(c.total_amount)
+          }))
+      );
+      setByJar(
+        (jar as { jar_code: string; jar_name_vi: string; actual_amount: number; target_percent: number | null }[]).map((j) => ({
+          ...j,
+          actual_amount: Number(j.actual_amount),
+          target_percent: j.target_percent != null ? Number(j.target_percent) : null
+        }))
+      );
+      setIncomePlan(plan ? Number(plan.expected_income) : 0);
+      setJarsMeta(
+        (jars as { code: string; name_vi: string; target_percent: number }[]).map((j) => ({
+          code: j.code,
+          name_vi: j.name_vi,
+          target_percent: Number(j.target_percent)
+        }))
+      );
+      setPortfolio(port);
+      setErr(null);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      if (options?.withLoading) {
+        setLoading(false);
+      }
+    }
+  };
+
   useEffect(() => {
     if (!ready || !telegramUserId) {
       setLoading(false);
@@ -73,90 +154,25 @@ export function DashboardPage() {
     }
     let cancelled = false;
     (async () => {
-      try {
-        setLoading(true);
-        const [sum, bal, cat, jar, plan, jars, port] = await Promise.all([
-          getMonthlySummary(telegramUserId, month),
-          fetchWalletBalances(telegramUserId),
-          getExpenseByCategory(telegramUserId, month),
-          getExpenseByJar(telegramUserId, month),
-          getMonthlyIncomePlan(telegramUserId, month),
-          getJars(),
-          fetchInvestmentOverview(telegramUserId).catch((e) => ({
-            positions: [],
-            summary: {
-              total_positions: 0,
-              total_quantity: 0,
-              total_cost_usdt: 0,
-              total_market_value_usdt: 0,
-              net_pnl_usdt: 0,
-              net_pnl_percent: null,
-              pnl_24h_usdt: 0
-            },
-            quote_warning: formatErrorMessage(e),
-            updated_at: new Date().toISOString()
-          }))
-        ]);
-        if (cancelled) {
-          return;
-        }
-        setSummary(
-          sum
-            ? {
-                total_income: Number(sum.total_income),
-                total_expense: Number(sum.total_expense),
-                net_amount: Number(sum.net_amount),
-                saving_rate_percent: sum.saving_rate_percent != null ? Number(sum.saving_rate_percent) : null
-              }
-            : { total_income: 0, total_expense: 0, net_amount: 0, saving_rate_percent: null }
-        );
-        setBalances(
-          (bal as { name_vi: string; current_balance: number; code: string; kind?: string }[]).map((b) => ({
-            name_vi: b.name_vi,
-            current_balance: Number(b.current_balance),
-            code: b.code,
-            kind: b.kind
-          }))
-        );
-        setTopCat(
-          (cat as { category_name: string; parent_name: string; total_amount: number }[])
-            .slice(0, 5)
-            .map((c) => ({
-              ...c,
-              total_amount: Number(c.total_amount)
-            }))
-        );
-        setByJar(
-          (jar as { jar_code: string; jar_name_vi: string; actual_amount: number; target_percent: number | null }[]).map((j) => ({
-            ...j,
-            actual_amount: Number(j.actual_amount),
-            target_percent: j.target_percent != null ? Number(j.target_percent) : null
-          }))
-        );
-        setIncomePlan(plan ? Number(plan.expected_income) : 0);
-        setJarsMeta(
-          (jars as { code: string; name_vi: string; target_percent: number }[]).map((j) => ({
-            code: j.code,
-            name_vi: j.name_vi,
-            target_percent: Number(j.target_percent)
-          }))
-        );
-        setPortfolio(port);
-        setErr(null);
-      } catch (e) {
-        if (!cancelled) {
-          setErr(e instanceof Error ? e.message : String(e));
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+      await loadDashboard(telegramUserId, { withLoading: true });
+      if (cancelled) {
+        return;
       }
     })();
     return () => {
       cancelled = true;
     };
   }, [ready, telegramUserId, month]);
+
+  useForegroundRefresh(
+    async () => {
+      if (!telegramUserId) {
+        return;
+      }
+      await loadDashboard(telegramUserId);
+    },
+    ready && Boolean(telegramUserId)
+  );
 
   const categoryMap = useMemo(() => {
     const map = new Map<string, { icon: string; color: string }>();
