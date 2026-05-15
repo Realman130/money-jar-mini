@@ -17,6 +17,10 @@ type Mode = "text" | "form" | "transfer";
 
 const fieldClass =
   "w-full rounded-[20px] border border-white/10 bg-white/[0.03] px-4 py-3 text-mjm-text placeholder:text-mjm-muted shadow-[0_10px_30px_rgba(2,6,23,0.12)] outline-none transition focus:border-mjm-accent/50 focus:bg-white/[0.05] focus:ring-4 focus:ring-mjm-accent/15";
+const quickInputClass =
+  "min-h-[88px] w-full rounded-[20px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.025))] p-3.5 text-[14px] leading-6 text-mjm-text placeholder:text-mjm-muted shadow-[0_12px_40px_rgba(2,6,23,0.16)] outline-none transition focus:border-mjm-accent/50 focus:ring-4 focus:ring-mjm-accent/15";
+const quickSaveClass =
+  "min-h-[88px] rounded-[20px] px-3 py-3 text-center text-sm font-semibold leading-5 transition hover:brightness-110";
 
 function formatPreviewLabel(text: string) {
   return text.trim() || "—";
@@ -322,13 +326,22 @@ export function QuickAddPage() {
 
       {mode === "text" ? (
         <Surface className="space-y-4">
-          <textarea
-            ref={inputRef}
-            className="min-h-[118px] w-full rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.025))] p-4 text-[15px] leading-7 text-mjm-text placeholder:text-mjm-muted shadow-[0_12px_40px_rgba(2,6,23,0.16)] outline-none transition focus:border-mjm-accent/50 focus:ring-4 focus:ring-mjm-accent/15"
-            placeholder="Ví dụ: cf 35k tm, ăn trưa 55k bank, lương 20tr bank"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-          />
+          <div className="grid grid-cols-[minmax(0,1fr)_96px] items-stretch gap-2">
+            <textarea
+              ref={inputRef}
+              className={quickInputClass}
+              placeholder="Ví dụ: cf 35k tm, ăn trưa 55k bank, lương 20tr bank"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+            />
+            <button
+              type="button"
+              onClick={() => void saveText()}
+              className={`${quickSaveClass} bg-mjm-accent text-white shadow-[0_18px_40px_rgba(91,140,255,0.28)]`}
+            >
+              Lưu luôn
+            </button>
+          </div>
 
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {[
@@ -352,40 +365,29 @@ export function QuickAddPage() {
           </div>
 
           {textPreview}
-
-          <div className="sticky bottom-24 z-20 pt-1">
-            <button
-              type="button"
-              onClick={() => void saveText()}
-              className="w-full rounded-[20px] bg-mjm-accent py-3.5 font-semibold text-white shadow-[0_18px_40px_rgba(91,140,255,0.28)] transition hover:brightness-110"
-            >
-              Lưu luôn
-            </button>
-          </div>
         </Surface>
       ) : null}
 
       {mode === "transfer" ? (
         <Surface className="space-y-4">
-          <textarea
-            ref={inputRef}
-            className="min-h-[118px] w-full rounded-[24px] border border-white/10 bg-white/[0.03] p-4 text-[15px] leading-7 text-mjm-text placeholder:text-mjm-muted outline-none transition focus:border-mjm-accent/50 focus:ring-4 focus:ring-mjm-accent/15"
-            placeholder="chuyển 3tr bank sang tiết kiệm"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-          />
-
-          {textPreview}
-
-          <div className="sticky bottom-24 z-20 pt-1">
+          <div className="grid grid-cols-[minmax(0,1fr)_96px] items-stretch gap-2">
+            <textarea
+              ref={inputRef}
+              className={quickInputClass}
+              placeholder="chuyển 3tr bank sang tiết kiệm"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+            />
             <button
               type="button"
               onClick={() => void saveTransferMode()}
-              className="w-full rounded-[20px] bg-mjm-income py-3.5 font-semibold text-[#07140c] shadow-[0_18px_40px_rgba(74,222,128,0.18)] transition hover:brightness-110"
+              className={`${quickSaveClass} bg-mjm-income text-[#07140c] shadow-[0_18px_40px_rgba(74,222,128,0.18)]`}
             >
-              Lưu chuyển ví
+              Lưu chuyển
             </button>
           </div>
+
+          {textPreview}
         </Surface>
       ) : null}
 

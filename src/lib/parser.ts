@@ -20,10 +20,26 @@ const INCOME_HINTS = [
   "duoc tang",
   "hoan tien",
   "ban do",
-  "lai ",
   "tien lai",
+  "lai tien gui",
+  "lai gui",
+  "lai ki gui",
   "thu nhap",
   "hoa hong"
+];
+
+const EXPENSE_PRIORITY_HINTS = [
+  "lai vay",
+  "tra lai",
+  "chi lai",
+  "chi tien lai",
+  "tra tien lai",
+  "tra no",
+  "thanh toan lai",
+  "thanh toan no",
+  "phai tra lai",
+  "phai tra no",
+  "no lai"
 ];
 
 const EXPENSE_HINTS = [
@@ -37,10 +53,15 @@ const EXPENSE_HINTS = [
   "cafe",
   "ca phe",
   "grab",
-  "cf "
+  "cf ",
+  "phi ",
+  "chi phi"
 ];
 
 function inferType(noteNorm: string): TransactionType {
+  if (EXPENSE_PRIORITY_HINTS.some((h) => noteNorm.includes(h))) {
+    return "chi";
+  }
   if (INCOME_HINTS.some((h) => noteNorm.includes(h))) {
     return "thu";
   }
