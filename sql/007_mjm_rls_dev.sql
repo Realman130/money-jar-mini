@@ -10,6 +10,8 @@ alter table public.transfers enable row level security;
 alter table public.monthly_income_plans enable row level security;
 alter table public.jar_monthly_plans enable row level security;
 alter table public.category_monthly_budgets enable row level security;
+alter table public.investment_positions enable row level security;
+alter table public.investment_price_cache enable row level security;
 
 -- Categories / jars / aliases
 alter table public.categories enable row level security;
@@ -29,6 +31,8 @@ drop policy if exists "mjm_tr_all" on public.transfers;
 drop policy if exists "mjm_income_plan_all" on public.monthly_income_plans;
 drop policy if exists "mjm_jar_plan_all" on public.jar_monthly_plans;
 drop policy if exists "mjm_cat_budget_all" on public.category_monthly_budgets;
+drop policy if exists "mjm_investment_positions_all" on public.investment_positions;
+drop policy if exists "mjm_investment_price_cache_all" on public.investment_price_cache;
 
 create policy "mjm_categories_mut" on public.categories for all to anon, authenticated using (true) with check (true);
 create policy "mjm_jars_read" on public.jars for select to anon, authenticated using (true);
@@ -42,6 +46,8 @@ create policy "mjm_tr_all" on public.transfers for all to anon, authenticated us
 create policy "mjm_income_plan_all" on public.monthly_income_plans for all to anon, authenticated using (true) with check (true);
 create policy "mjm_jar_plan_all" on public.jar_monthly_plans for all to anon, authenticated using (true) with check (true);
 create policy "mjm_cat_budget_all" on public.category_monthly_budgets for all to anon, authenticated using (true) with check (true);
+create policy "mjm_investment_positions_all" on public.investment_positions for all to anon, authenticated using (true) with check (true);
+create policy "mjm_investment_price_cache_all" on public.investment_price_cache for all to anon, authenticated using (true) with check (true);
 
 grant usage on schema public to anon, authenticated;
 grant select on public.v_transactions_enriched to anon, authenticated;
@@ -51,5 +57,9 @@ grant select on public.v_monthly_expense_by_category to anon, authenticated;
 grant select on public.v_monthly_expense_by_jar to anon, authenticated;
 grant select on public.v_wallet_balances to anon, authenticated;
 grant select on public.v_top_merchants to anon, authenticated;
+grant select on public.v_investment_positions_enriched to anon, authenticated;
+grant select on public.v_investment_summary to anon, authenticated;
+grant select, insert, update, delete on public.investment_positions to anon, authenticated;
+grant select, insert, update, delete on public.investment_price_cache to anon, authenticated;
 
 grant execute on function public.mjm_seed_wallets_for_user(bigint) to anon, authenticated;

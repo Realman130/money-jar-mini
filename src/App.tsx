@@ -6,6 +6,7 @@ import { QuickAddPage } from "@/pages/QuickAddPage";
 import { HistoryPage } from "@/pages/HistoryPage";
 import { ReportsPage } from "@/pages/ReportsPage";
 import { MorePage } from "@/pages/MorePage";
+import { InvestmentsPage } from "@/pages/InvestmentsPage";
 import { WalletsPage } from "@/pages/WalletsPage";
 import { CategoriesPage } from "@/pages/CategoriesPage";
 import { BudgetsPage } from "@/pages/BudgetsPage";
@@ -22,6 +23,7 @@ export default function App() {
             <Route path="/history" element={<HistoryPage />} />
             <Route path="/reports" element={<ReportsPage />} />
             <Route path="/more" element={<MorePage />} />
+            <Route path="/investments" element={<InvestmentsPage />} />
             <Route path="/wallets" element={<WalletsPage />} />
             <Route path="/categories" element={<CategoriesPage />} />
             <Route path="/budgets" element={<BudgetsPage />} />

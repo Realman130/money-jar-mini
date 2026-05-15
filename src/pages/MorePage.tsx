@@ -3,6 +3,7 @@ import { ActionTile, Pill, SectionHeader, Surface } from "@/components/common/Fi
 
 const links = [
   { to: "/wallets", title: "Ví tiền", desc: "Số dư, loại ví, và phân bổ tiền.", icon: "↔", tone: "accent", badge: "Tài sản" },
+  { to: "/investments", title: "Đầu tư", desc: "Portfolio crypto, lãi/lỗ và giá live.", icon: "◈", tone: "warn", badge: "Crypto" },
   { to: "/categories", title: "Danh mục", desc: "Nhóm thu / chi và mapping hũ.", icon: "◫", tone: "income", badge: "Phân loại" },
   { to: "/budgets", title: "Ngân sách / 6 hũ", desc: "Thu dự kiến và tỷ lệ ngân sách.", icon: "◎", tone: "warn", badge: "Kế hoạch" },
   { to: "/settings", title: "Cài đặt", desc: "Giao diện, đồng bộ, dữ liệu.", icon: "⚙", tone: "neutral", badge: "Hệ thống" }

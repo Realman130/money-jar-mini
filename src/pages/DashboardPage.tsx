@@ -4,6 +4,8 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { EmptyState } from "@/components/common/EmptyState";
 import { Loading } from "@/components/common/Loading";
 import { MoneyText } from "@/components/common/MoneyText";
+import { formatErrorMessage } from "@/lib/error";
+import { DEFAULT_USDT_VND_RATE, formatPercent, formatUsdt } from "@/lib/crypto";
 import { formatVnd } from "@/lib/money";
 import { useApp } from "@/context/AppContext";
 import {
@@ -14,8 +16,9 @@ import {
   getMonthlyIncomePlan,
   getMonthlySummary
 } from "@/services/report.service";
+import { fetchInvestmentOverview } from "@/services/investment.service";
 import { fetchWalletBalances } from "@/services/wallet.service";
-import { Pill, ProgressBar, SectionHeader, Surface } from "@/components/common/Fintech";
+import { MetricCard, Pill, ProgressBar, SectionHeader, Surface } from "@/components/common/Fintech";
 
 export function DashboardPage() {
   const { telegramUserId, ready, error, categories } = useApp();
@@ -33,6 +36,35 @@ export function DashboardPage() {
   const [byJar, setByJar] = useState<{ jar_code: string; jar_name_vi: string; actual_amount: number; target_percent: number | null }[]>([]);
   const [incomePlan, setIncomePlan] = useState<number>(0);
   const [jarsMeta, setJarsMeta] = useState<{ code: string; name_vi: string; target_percent: number }[]>([]);
+  const [portfolio, setPortfolio] = useState<{
+    positions: {
+      id: string;
+      asset_code: string;
+      asset_name: string;
+      market_symbol: string;
+      exchange_name: string;
+      quantity: number;
+      avg_cost_usdt: number;
+      market_price_usdt: number | null;
+      price_change_percent_24h: number | null;
+      market_value_usdt: number;
+      cost_basis_usdt: number;
+      net_pnl_usdt: number;
+      net_pnl_percent: number | null;
+      pnl_24h_usdt: number;
+    }[];
+    summary: {
+      total_positions: number;
+      total_quantity: number;
+      total_cost_usdt: number;
+      total_market_value_usdt: number;
+      net_pnl_usdt: number;
+      net_pnl_percent: number | null;
+      pnl_24h_usdt: number;
+    };
+    quote_warning: string | null;
+    updated_at: string;
+  } | null>(null);
 
   useEffect(() => {
     if (!ready || !telegramUserId) {
@@ -43,13 +75,27 @@ export function DashboardPage() {
     (async () => {
       try {
         setLoading(true);
-        const [sum, bal, cat, jar, plan, jars] = await Promise.all([
+        const [sum, bal, cat, jar, plan, jars, port] = await Promise.all([
           getMonthlySummary(telegramUserId, month),
           fetchWalletBalances(telegramUserId),
           getExpenseByCategory(telegramUserId, month),
           getExpenseByJar(telegramUserId, month),
           getMonthlyIncomePlan(telegramUserId, month),
-          getJars()
+          getJars(),
+          fetchInvestmentOverview(telegramUserId).catch((e) => ({
+            positions: [],
+            summary: {
+              total_positions: 0,
+              total_quantity: 0,
+              total_cost_usdt: 0,
+              total_market_value_usdt: 0,
+              net_pnl_usdt: 0,
+              net_pnl_percent: null,
+              pnl_24h_usdt: 0
+            },
+            quote_warning: formatErrorMessage(e),
+            updated_at: new Date().toISOString()
+          }))
         ]);
         if (cancelled) {
           return;
@@ -95,6 +141,7 @@ export function DashboardPage() {
             target_percent: Number(j.target_percent)
           }))
         );
+        setPortfolio(port);
         setErr(null);
       } catch (e) {
         if (!cancelled) {
@@ -120,6 +167,10 @@ export function DashboardPage() {
   }, [categories]);
 
   const totalAssets = balances.reduce((sum, row) => sum + row.current_balance, 0);
+  const portfolioSummary = portfolio?.summary;
+  const portfolioPositions = portfolio?.positions ?? [];
+  const portfolioRate = DEFAULT_USDT_VND_RATE;
+  const topPortfolioPositions = portfolioPositions.slice(0, 3);
 
   if (!ready) {
     return <Loading />;
@@ -247,6 +298,117 @@ export function DashboardPage() {
           <p className="mt-1 text-sm leading-6 text-mjm-muted">Tự phân tích danh mục, hũ và ví ngay khi nhập.</p>
         </Link>
       </div>
+
+      <Surface className="space-y-4">
+        <SectionHeader
+          kicker="Đầu tư"
+          title="Danh mục đầu tư"
+          subtitle="Manual holdings · giá live từ Binance"
+          action={
+            <Link
+              to="/investments"
+              className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-semibold text-mjm-text transition hover:bg-white/[0.05]"
+            >
+              Xem tất cả
+            </Link>
+          }
+        />
+        <div className="grid grid-cols-2 gap-2">
+          <MetricCard
+            label="Tổng tài sản (USDT)"
+            value={formatUsdt(portfolioSummary?.total_market_value_usdt ?? 0)}
+            hint={`≈ ${formatVnd(Math.round((portfolioSummary?.total_market_value_usdt ?? 0) * portfolioRate))}`}
+            tone="accent"
+            className="p-3"
+          />
+          <MetricCard
+            label="Lãi / lỗ ròng"
+            value={formatUsdt(portfolioSummary?.net_pnl_usdt ?? 0, { signed: true })}
+            hint={portfolioSummary?.net_pnl_percent != null ? formatPercent(portfolioSummary.net_pnl_percent, { signed: true }) : "—"}
+            tone={(portfolioSummary?.net_pnl_usdt ?? 0) >= 0 ? "income" : "expense"}
+            className="p-3"
+          />
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          <MetricCard
+            label="Vốn gốc"
+            value={formatUsdt(portfolioSummary?.total_cost_usdt ?? 0)}
+            hint="Giá vốn đang nắm giữ"
+            tone="neutral"
+            className="p-3"
+          />
+          <MetricCard
+            label="24h"
+            value={formatUsdt(portfolioSummary?.pnl_24h_usdt ?? 0, { signed: true })}
+            hint="Biến động ngắn hạn"
+            tone={(portfolioSummary?.pnl_24h_usdt ?? 0) >= 0 ? "income" : "expense"}
+            className="p-3"
+          />
+          <MetricCard
+            label="Vị thế"
+            value={(portfolioSummary?.total_positions ?? 0).toLocaleString("vi-VN")}
+            hint="Coin đang theo dõi"
+            tone="accent"
+            className="p-3"
+          />
+        </div>
+        {portfolio?.quote_warning ? <p className="text-xs leading-5 text-mjm-muted">{portfolio.quote_warning}</p> : null}
+        <div className="space-y-2">
+          {topPortfolioPositions.length === 0 ? (
+            <EmptyState title="Chưa có đầu tư" hint="Mở màn Đầu tư để thêm vị thế crypto đầu tiên." />
+          ) : (
+            topPortfolioPositions.map((position) => {
+              const changeTone =
+                position.price_change_percent_24h == null
+                  ? "neutral"
+                  : position.price_change_percent_24h >= 0
+                    ? "income"
+                    : "expense";
+              return (
+                <div key={position.id} className="rounded-[20px] border border-white/8 bg-white/[0.03] p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="truncate font-semibold text-mjm-text">{position.asset_code}</p>
+                        <Pill tone="accent">{position.exchange_name}</Pill>
+                      </div>
+                      <p className="mt-1 text-xs text-mjm-muted">{position.asset_name}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className={`font-display text-lg font-semibold tracking-[-0.03em] ${position.net_pnl_usdt >= 0 ? "text-mjm-income" : "text-mjm-expense"}`}>
+                        {formatUsdt(position.market_value_usdt)}
+                      </p>
+                      <p className="mt-1 text-xs text-mjm-muted">≈ {formatVnd(Math.round(position.market_value_usdt * portfolioRate))}</p>
+                    </div>
+                  </div>
+                  <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
+                    <div className="rounded-[16px] border border-white/8 bg-black/10 p-2">
+                      <p className="text-[10px] uppercase tracking-[0.18em] text-mjm-muted">SL</p>
+                      <p className="mt-1 font-semibold text-mjm-text">{formatUsdt(position.quantity, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}</p>
+                    </div>
+                    <div className="rounded-[16px] border border-white/8 bg-black/10 p-2">
+                      <p className="text-[10px] uppercase tracking-[0.18em] text-mjm-muted">Giá vốn</p>
+                      <p className="mt-1 font-semibold text-mjm-text">{formatUsdt(position.avg_cost_usdt)}</p>
+                    </div>
+                    <div className="rounded-[16px] border border-white/8 bg-black/10 p-2">
+                      <p className="text-[10px] uppercase tracking-[0.18em] text-mjm-muted">P/L</p>
+                      <p className={`mt-1 font-semibold ${position.net_pnl_usdt >= 0 ? "text-mjm-income" : "text-mjm-expense"}`}>
+                        {formatUsdt(position.net_pnl_usdt, { signed: true })}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex items-center gap-3">
+                    <ProgressBar value={portfolioSummary && portfolioSummary.total_market_value_usdt > 0 ? (position.market_value_usdt / portfolioSummary.total_market_value_usdt) * 100 : 0} tone="accent" className="h-2 flex-1" />
+                    <Pill tone={changeTone as "neutral" | "accent" | "income" | "expense" | "warn"}>
+                      {position.price_change_percent_24h != null ? formatPercent(position.price_change_percent_24h, { signed: true }) : "24h —"}
+                    </Pill>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </Surface>
 
       <Surface>
         <SectionHeader kicker="Tài sản" title="Ví" subtitle="Phân bổ số dư theo từng ví" />

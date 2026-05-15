@@ -98,3 +98,55 @@ export interface MonthlySummaryRow {
   net_amount: number;
   saving_rate_percent: number | null;
 }
+
+export interface InvestmentPositionRow {
+  id: string;
+  telegram_user_id: number;
+  asset_code: string;
+  asset_name: string;
+  market_symbol: string;
+  exchange_name: string;
+  quantity: number;
+  avg_cost_usdt: number;
+  note: string;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+export interface InvestmentPriceRow {
+  symbol: string;
+  price_usdt: number;
+  price_change_percent_24h: number | null;
+  quote_volume_usdt: number | null;
+  source: string;
+  updated_at: string;
+}
+
+export interface InvestmentPositionSnapshot extends InvestmentPositionRow {
+  market_price_usdt: number | null;
+  price_change_percent_24h: number | null;
+  market_value_usdt: number;
+  cost_basis_usdt: number;
+  net_pnl_usdt: number;
+  net_pnl_percent: number | null;
+  pnl_24h_usdt: number;
+}
+
+export interface InvestmentPortfolioSummary {
+  total_positions: number;
+  total_quantity: number;
+  total_cost_usdt: number;
+  total_market_value_usdt: number;
+  net_pnl_usdt: number;
+  net_pnl_percent: number | null;
+  pnl_24h_usdt: number;
+}
+
+export interface InvestmentPortfolioOverview {
+  positions: InvestmentPositionSnapshot[];
+  summary: InvestmentPortfolioSummary;
+  quote_warning: string | null;
+  updated_at: string;
+}
