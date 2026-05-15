@@ -328,7 +328,8 @@ export function DashboardPage() {
                 {formatUsdt(portfolioSummary?.net_pnl_usdt ?? 0, { signed: true })}
               </span>
             }
-            hint={portfolioSummary?.net_pnl_percent != null ? formatPercent(portfolioSummary.net_pnl_percent, { signed: true }) : "—"}
+            hint={`≈ ${formatVnd(Math.round((portfolioSummary?.net_pnl_usdt ?? 0) * portfolioRate))}`}
+            badge={portfolioSummary?.net_pnl_percent != null ? formatPercent(portfolioSummary.net_pnl_percent, { signed: true }) : "—"}
             tone={(portfolioSummary?.net_pnl_usdt ?? 0) >= 0 ? "income" : "expense"}
             className="p-3"
           />
