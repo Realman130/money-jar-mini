@@ -54,6 +54,21 @@ export async function getExpenseByJar(uid: number, month: string) {
   return data ?? [];
 }
 
+export async function getExpenseCategoryMixByJar(uid: number, from: string, to: string) {
+  const { data, error } = await supabase
+    .from("v_transactions_enriched")
+    .select("jar_code, jar_name_vi, category_name, category_parent_name, category_color, amount")
+    .eq("telegram_user_id", uid)
+    .eq("type", "chi")
+    .gte("transaction_date", from)
+    .lte("transaction_date", to)
+    .not("jar_code", "is", null);
+  if (error) {
+    throw error;
+  }
+  return data ?? [];
+}
+
 export async function getJars() {
   const { data, error } = await supabase.from("jars").select("*").order("sort_order");
   if (error) {

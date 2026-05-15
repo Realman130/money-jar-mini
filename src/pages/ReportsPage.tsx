@@ -6,6 +6,8 @@ import {
   Cell,
   Line,
   LineChart,
+  Pie,
+  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -21,13 +23,16 @@ import { monthEndDate } from "@/lib/date";
 import {
   currentMonthStart,
   getDailyFlow,
+  getExpenseCategoryMixByJar,
   getExpenseByCategory,
   getExpenseByJar,
+  getJars,
   getMonthlyIncomePlan,
   getMonthlySummary
 } from "@/services/report.service";
 import { fetchWalletBalances } from "@/services/wallet.service";
 import { formatVnd } from "@/lib/money";
+import { formatPercent } from "@/lib/crypto";
 
 const chartTooltipStyle = {
   backgroundColor: "#0c131f",
@@ -85,8 +90,20 @@ export function ReportsPage() {
   const [daily, setDaily] = useState<{ transaction_date: string; total_expense: number; total_income: number }[]>([]);
   const [byCat, setByCat] = useState<{ category_name: string; total_amount: number }[]>([]);
   const [byJar, setByJar] = useState<{ jar_name_vi: string; actual_amount: number; jar_code?: string; target_percent: number | null }[]>([]);
+  const [jarsMeta, setJarsMeta] = useState<{ code: string; name_vi: string; target_percent: number }[]>([]);
+  const [jarMixRows, setJarMixRows] = useState<
+    {
+      jar_code: string;
+      jar_name_vi: string;
+      category_name: string;
+      category_parent_name: string;
+      category_color: string;
+      amount: number;
+    }[]
+  >([]);
   const [wbal, setWbal] = useState<{ name_vi: string; current_balance: number; code?: string; kind?: string }[]>([]);
   const [incomePlan, setIncomePlan] = useState<number>(0);
+  const [selectedJarCode, setSelectedJarCode] = useState<string | null>(null);
 
   useEffect(() => {
     if (!ready || !telegramUserId) {
@@ -99,10 +116,12 @@ export function ReportsPage() {
       getDailyFlow(telegramUserId, month, end),
       getExpenseByCategory(telegramUserId, month),
       getExpenseByJar(telegramUserId, month),
+      getExpenseCategoryMixByJar(telegramUserId, month, end),
+      getJars(),
       fetchWalletBalances(telegramUserId),
       getMonthlyIncomePlan(telegramUserId, month)
     ])
-      .then(([s, d, c, j, w, p]) => {
+      .then(([s, d, c, j, mix, jars, w, p]) => {
         setSummary(
           s
             ? {
@@ -131,6 +150,27 @@ export function ReportsPage() {
             target_percent: x.target_percent != null ? Number(x.target_percent) : null
           }))
         );
+        setJarMixRows(
+          (
+            mix as {
+              jar_code: string;
+              jar_name_vi: string;
+              category_name: string;
+              category_parent_name: string;
+              category_color: string;
+              amount: number;
+            }[]
+          ).map((x) => ({
+            ...x,
+            amount: Number(x.amount)
+          }))
+        );
+        setJarsMeta(
+          (jars as { code: string; name_vi: string; target_percent: number }[]).map((x) => ({
+            ...x,
+            target_percent: Number(x.target_percent)
+          }))
+        );
         setWbal(
           (w as { name_vi: string; current_balance: number; code?: string; kind?: string }[]).map((x) => ({
             ...x,
@@ -141,6 +181,13 @@ export function ReportsPage() {
       })
       .finally(() => setLoading(false));
   }, [ready, telegramUserId, month]);
+
+  useEffect(() => {
+    if (selectedJarCode || jarsMeta.length === 0) {
+      return;
+    }
+    setSelectedJarCode(jarsMeta[0]?.code ?? null);
+  }, [jarsMeta, selectedJarCode]);
 
   const dailyChart = useMemo(
     () =>
@@ -163,6 +210,55 @@ export function ReportsPage() {
   }, [dailyChart]);
 
   const sortedCats = useMemo(() => byCat.slice().sort((a, b) => b.total_amount - a.total_amount), [byCat]);
+  const jarCards = useMemo(() => {
+    const actualMap = new Map(byJar.filter((item) => item.jar_code).map((item) => [item.jar_code as string, item]));
+    return jarsMeta.map((jar) => {
+      const current = actualMap.get(jar.code);
+      return {
+        jar_code: jar.code,
+        jar_name_vi: jar.name_vi,
+        target_percent: jar.target_percent,
+        actual_amount: current?.actual_amount ?? 0
+      };
+    });
+  }, [byJar, jarsMeta]);
+  const uncategorizedExpense = useMemo(
+    () => byJar.filter((item) => !item.jar_code).reduce((sum, item) => sum + item.actual_amount, 0),
+    [byJar]
+  );
+  const jarBreakdown = useMemo(() => {
+    const filtered = jarMixRows.filter((row) => row.jar_code === selectedJarCode);
+    const grouped = new Map<
+      string,
+      {
+        category_name: string;
+        category_parent_name: string;
+        category_color: string;
+        total_amount: number;
+      }
+    >();
+
+    for (const row of filtered) {
+      const key = `${row.category_parent_name}__${row.category_name}`;
+      const current = grouped.get(key);
+      if (current) {
+        current.total_amount += row.amount;
+        continue;
+      }
+      grouped.set(key, {
+        category_name: row.category_name,
+        category_parent_name: row.category_parent_name,
+        category_color: row.category_color,
+        total_amount: row.amount
+      });
+    }
+
+    return [...grouped.values()].sort((a, b) => b.total_amount - a.total_amount);
+  }, [jarMixRows, selectedJarCode]);
+  const selectedJar = useMemo(
+    () => jarCards.find((jar) => jar.jar_code === selectedJarCode) ?? null,
+    [jarCards, selectedJarCode]
+  );
 
   const totalExpense = summary?.total_expense ?? 0;
   const totalIncome = summary?.total_income ?? 0;
@@ -195,6 +291,8 @@ export function ReportsPage() {
     }
     return best;
   }, null);
+  const selectedJarBudget = selectedJar ? Math.round((plannedIncome * (selectedJar.target_percent ?? 0)) / 100) : 0;
+  const selectedJarShareOfIncome = plannedIncome > 0 && selectedJar ? (selectedJar.actual_amount / plannedIncome) * 100 : 0;
 
   return (
     <div className="space-y-5">
@@ -358,32 +456,135 @@ export function ReportsPage() {
       ) : null}
 
       {tab === "jars" ? (
-        <Surface className="space-y-3">
-          <SectionHeader title="6 hũ" subtitle="Tỷ lệ thực chi so với quỹ dự kiến theo thu nhập." />
-          <div className="space-y-3">
-            {byJar.map((j) => {
-              const percent = j.target_percent ?? 10;
-              const budget = plannedIncome > 0 ? Math.round((plannedIncome * percent) / 100) : 0;
-              const usedPct = budget > 0 ? (j.actual_amount / budget) * 100 : j.actual_amount > 0 ? 100 : 0;
-              const tone = usedPct >= 100 ? "expense" : usedPct >= 80 ? "warn" : "accent";
-              return (
-                <div key={j.jar_name_vi} className="rounded-[20px] border border-white/8 bg-white/[0.03] p-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="font-semibold text-mjm-text">{j.jar_name_vi}</p>
-                      <p className="mt-1 text-xs text-mjm-muted">
-                        Đã chi {formatVnd(j.actual_amount)}
-                        {budget > 0 ? ` / kế hoạch ${formatVnd(budget)}` : ""}
-                      </p>
+        <div className="space-y-4">
+          <Surface className="space-y-3">
+            <SectionHeader title="6 hũ" subtitle="Chạm vào từng hũ để xem tỷ trọng danh mục và phần trăm trên thu nhập." />
+            {uncategorizedExpense > 0 ? (
+              <div className="rounded-[18px] border border-mjm-warn/25 bg-mjm-warn/10 px-4 py-3 text-sm leading-6 text-mjm-text">
+                Còn {formatVnd(uncategorizedExpense)} chưa gán vào hũ nào. Những khoản này sẽ không vào breakdown 6 hũ cho tới khi được phân loại.
+              </div>
+            ) : null}
+            <div className="space-y-3">
+              {jarCards.map((j) => {
+                const percent = j.target_percent ?? 10;
+                const budget = plannedIncome > 0 ? Math.round((plannedIncome * percent) / 100) : 0;
+                const usedPct = budget > 0 ? (j.actual_amount / budget) * 100 : j.actual_amount > 0 ? 100 : 0;
+                const tone = usedPct >= 100 ? "expense" : usedPct >= 80 ? "warn" : "accent";
+                const isActive = selectedJarCode === j.jar_code;
+                return (
+                  <button
+                    key={j.jar_code}
+                    type="button"
+                    onClick={() => setSelectedJarCode(j.jar_code)}
+                    className={`w-full rounded-[20px] border p-3 text-left transition ${
+                      isActive
+                        ? "border-mjm-accent/30 bg-mjm-accent/10 shadow-[0_0_0_1px_rgba(91,140,255,0.16)]"
+                        : "border-white/8 bg-white/[0.03] hover:border-white/14 hover:bg-white/[0.05]"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-semibold text-mjm-text">{j.jar_name_vi}</p>
+                        <p className="mt-1 text-xs text-mjm-muted">
+                          Đã chi {formatVnd(j.actual_amount)}
+                          {budget > 0 ? ` / kế hoạch ${formatVnd(budget)}` : ""}
+                        </p>
+                      </div>
+                      <Pill tone={tone}>{Math.round(Math.min(100, usedPct))}%</Pill>
                     </div>
-                    <Pill tone={tone}>{Math.round(Math.min(100, usedPct))}%</Pill>
-                  </div>
-                  <ProgressBar value={usedPct} tone={tone} className="mt-3" />
+                    <ProgressBar value={usedPct} tone={tone} className="mt-3" />
+                  </button>
+                );
+              })}
+            </div>
+          </Surface>
+
+          {selectedJar ? (
+            <Surface className="space-y-4">
+              <SectionHeader
+                title={`Chi tiết hũ ${selectedJar.jar_name_vi}`}
+                subtitle="Pie chart cho biết tỷ trọng trong hũ. Danh sách bên dưới cho biết từng danh mục đang chiếm bao nhiêu phần trăm thu nhập tháng."
+                action={<Pill tone="accent">{formatPercent(selectedJarShareOfIncome, { maximumFractionDigits: 1 })}</Pill>}
+              />
+
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <div className="rounded-[20px] border border-white/8 bg-white/[0.03] p-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-mjm-muted">Đã chi</p>
+                  <div className="mt-2 text-[0.88rem] font-semibold tracking-[-0.04em] text-mjm-expense">{formatVnd(selectedJar.actual_amount)}</div>
                 </div>
-              );
-            })}
-          </div>
-        </Surface>
+                <div className="rounded-[20px] border border-white/8 bg-white/[0.03] p-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-mjm-muted">Kế hoạch</p>
+                  <div className="mt-2 text-[0.88rem] font-semibold tracking-[-0.04em] text-mjm-accent">{selectedJarBudget > 0 ? formatVnd(selectedJarBudget) : "—"}</div>
+                </div>
+                <div className="rounded-[20px] border border-white/8 bg-white/[0.03] p-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-mjm-muted">% thu nhập</p>
+                  <div className="mt-2 text-[0.88rem] font-semibold tracking-[-0.04em] text-mjm-text">
+                    {plannedIncome > 0 ? formatPercent(selectedJarShareOfIncome, { maximumFractionDigits: 1 }) : "—"}
+                  </div>
+                </div>
+                <div className="rounded-[20px] border border-white/8 bg-white/[0.03] p-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-mjm-muted">Mục chi</p>
+                  <div className="mt-2 text-[0.88rem] font-semibold tracking-[-0.04em] text-mjm-text">{jarBreakdown.length}</div>
+                </div>
+              </div>
+
+              {jarBreakdown.length === 0 ? (
+                <EmptyState title="Chưa có chi tiêu trong hũ này" hint="Khi phát sinh giao dịch thuộc hũ này, breakdown sẽ hiện ra tại đây." />
+              ) : (
+                <div className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
+                  <div className="h-72 overflow-hidden rounded-[22px] border border-white/10 bg-black/10 p-2">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={jarBreakdown}
+                          dataKey="total_amount"
+                          nameKey="category_name"
+                          innerRadius={54}
+                          outerRadius={92}
+                          paddingAngle={2}
+                        >
+                          {jarBreakdown.map((entry, index) => (
+                            <Cell key={`${entry.category_name}-${index}`} fill={entry.category_color || COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip content={<CategoryTooltip />} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  <div className="space-y-3">
+                    {jarBreakdown.map((item) => {
+                      const shareOfJar = selectedJar.actual_amount > 0 ? (item.total_amount / selectedJar.actual_amount) * 100 : 0;
+                      const shareOfIncome = plannedIncome > 0 ? (item.total_amount / plannedIncome) * 100 : 0;
+                      return (
+                        <div key={`${selectedJar.jar_code}-${item.category_name}`} className="rounded-[20px] border border-white/8 bg-white/[0.03] p-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className="h-2.5 w-2.5 rounded-full"
+                                  style={{ backgroundColor: item.category_color || COLORS[0] }}
+                                />
+                                <p className="truncate font-semibold text-mjm-text">{item.category_name}</p>
+                              </div>
+                              <p className="mt-1 text-xs text-mjm-muted">{item.category_parent_name}</p>
+                            </div>
+                            <MoneyText amount={item.total_amount} type="expense" />
+                          </div>
+                          <div className="mt-3 flex items-center justify-between gap-3 text-xs text-mjm-muted">
+                            <span>{formatPercent(shareOfJar, { maximumFractionDigits: 1 })} trong hũ</span>
+                            <span>{plannedIncome > 0 ? formatPercent(shareOfIncome, { maximumFractionDigits: 1 }) : "—"} thu nhập</span>
+                          </div>
+                          <ProgressBar value={shareOfJar} tone="expense" className="mt-2" />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </Surface>
+          ) : null}
+        </div>
       ) : null}
 
       {tab === "wallets" ? (
