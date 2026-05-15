@@ -216,18 +216,18 @@ export function InvestmentsPage() {
       <Surface className="relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(91,140,255,0.22),transparent_35%),radial-gradient(circle_at_bottom_left,rgba(74,222,128,0.1),transparent_30%)]" />
         <div className="relative space-y-5">
-          <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
               <Pill tone="accent">Live Binance</Pill>
               <p className="mt-3 text-sm font-medium text-mjm-muted">Tổng tài sản đầu tư</p>
-              <p className="mt-2 font-display text-[2.6rem] font-semibold leading-none tracking-[-0.06em] sm:text-[3rem]">
+              <p className="mt-2 font-display text-[clamp(2.1rem,11vw,3rem)] font-semibold leading-[0.9] tracking-[-0.08em]">
                 <span className="text-mjm-text">{formatUsdt(summary.total_market_value_usdt)}</span>
               </p>
               <p className="mt-2 text-sm leading-6 text-mjm-muted">
                 ≈ <span className="font-semibold text-mjm-text">{formatVnd(Math.round(summary.total_market_value_usdt * rate))}</span>
               </p>
             </div>
-            <div className="shrink-0 rounded-[24px] border border-white/10 bg-white/[0.04] px-4 py-3 text-right">
+            <div className="rounded-[24px] border border-white/10 bg-white/[0.04] px-4 py-3 text-left sm:shrink-0 sm:text-right">
               <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-mjm-muted">Vị thế</p>
               <p className="mt-2 font-display text-3xl font-semibold tracking-[-0.06em] text-mjm-text">{summary.total_positions}</p>
               <p className="text-xs text-mjm-muted">coin đang theo dõi</p>
@@ -250,21 +250,25 @@ export function InvestmentsPage() {
           <div className="grid grid-cols-3 gap-2">
             <MetricCard
               label="Vốn gốc"
-              value={formatUsdt(summary.total_cost_usdt)}
+              value={<span className="block text-[1.25rem] leading-[0.92] tracking-[-0.06em]">{formatUsdt(summary.total_cost_usdt)}</span>}
               hint={`Giá vốn từ ${summary.total_positions.toLocaleString("vi-VN")} vị thế`}
               tone="neutral"
               className="p-3"
             />
             <MetricCard
               label="24h"
-              value={formatUsdt(summary.pnl_24h_usdt, { signed: true })}
+              value={<span className="block text-[1.25rem] leading-[0.92] tracking-[-0.06em]">{formatUsdt(summary.pnl_24h_usdt, { signed: true })}</span>}
               hint="Biến động 24 giờ"
               tone={summary.pnl_24h_usdt >= 0 ? "income" : "expense"}
               className="p-3"
             />
             <MetricCard
               label="Tỷ suất"
-              value={summary.net_pnl_percent != null ? formatPercent(summary.net_pnl_percent, { signed: true }) : "—"}
+              value={
+                <span className="block text-[1.25rem] leading-[0.92] tracking-[-0.06em]">
+                  {summary.net_pnl_percent != null ? formatPercent(summary.net_pnl_percent, { signed: true }) : "—"}
+                </span>
+              }
               hint="P/L trên vốn gốc"
               tone={summary.net_pnl_usdt >= 0 ? "income" : "expense"}
               className="p-3"
@@ -326,8 +330,9 @@ export function InvestmentsPage() {
               className="w-full rounded-[18px] border border-white/10 bg-white/[0.03] px-4 py-3 text-mjm-text outline-none transition focus:border-mjm-accent/50 focus:ring-4 focus:ring-mjm-accent/15"
               value={form.quantity}
               onChange={(e) => setForm((current) => ({ ...current, quantity: e.target.value }))}
-              placeholder="128.5"
+              placeholder="89,518"
               inputMode="decimal"
+              enterKeyHint="next"
             />
           </label>
           <label className="block">
@@ -336,8 +341,9 @@ export function InvestmentsPage() {
               className="w-full rounded-[18px] border border-white/10 bg-white/[0.03] px-4 py-3 text-mjm-text outline-none transition focus:border-mjm-accent/50 focus:ring-4 focus:ring-mjm-accent/15"
               value={form.avgCostUsdt}
               onChange={(e) => setForm((current) => ({ ...current, avgCostUsdt: e.target.value }))}
-              placeholder="10.25"
+              placeholder="10,25"
               inputMode="decimal"
+              enterKeyHint="next"
             />
           </label>
           <label className="block">
@@ -412,7 +418,7 @@ export function InvestmentsPage() {
 
               return (
                 <div key={position.id} className="rounded-[20px] border border-white/8 bg-white/[0.03] p-3">
-                  <div className="flex items-start justify-between gap-3">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="flex min-w-0 items-start gap-3">
                       <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-white/10 bg-white/[0.04] font-display text-base font-semibold tracking-[-0.04em] text-mjm-text">
                         {position.asset_code.slice(0, 1)}
@@ -427,8 +433,8 @@ export function InvestmentsPage() {
                         </p>
                       </div>
                     </div>
-                    <div className="shrink-0 text-right">
-                      <p className="font-display text-[1.15rem] font-semibold tracking-[-0.03em] text-mjm-text">
+                    <div className="sm:shrink-0 sm:text-right">
+                      <p className="font-display text-[1rem] font-semibold leading-[0.95] tracking-[-0.05em] text-mjm-text sm:text-[1.15rem]">
                         {formatUsdt(position.market_value_usdt)}
                       </p>
                       <p className="mt-1 text-xs text-mjm-muted">≈ {formatVnd(Math.round(position.market_value_usdt * rate))}</p>
@@ -438,15 +444,15 @@ export function InvestmentsPage() {
                   <div className="mt-3 grid grid-cols-3 gap-2">
                     <div className="rounded-[18px] border border-white/8 bg-white/[0.03] p-3">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-mjm-muted">Số lượng</p>
-                      <p className="mt-1 font-semibold text-mjm-text">{formatUsdt(position.quantity, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}</p>
+                      <p className="mt-1 text-[1.05rem] font-semibold leading-[1.05] text-mjm-text">{formatUsdt(position.quantity, { maximumFractionDigits: 6 })}</p>
                     </div>
                     <div className="rounded-[18px] border border-white/8 bg-white/[0.03] p-3">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-mjm-muted">Giá vốn</p>
-                      <p className="mt-1 font-semibold text-mjm-text">{formatUsdt(position.avg_cost_usdt)}</p>
+                      <p className="mt-1 text-[1.05rem] font-semibold leading-[1.05] text-mjm-text">{formatUsdt(position.avg_cost_usdt)}</p>
                     </div>
                     <div className="rounded-[18px] border border-white/8 bg-white/[0.03] p-3">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-mjm-muted">Lãi / lỗ</p>
-                      <p className={`mt-1 font-semibold ${pnlTone === "income" ? "text-mjm-income" : "text-mjm-expense"}`}>
+                      <p className={`mt-1 text-[1.05rem] font-semibold leading-[1.05] ${pnlTone === "income" ? "text-mjm-income" : "text-mjm-expense"}`}>
                         {formatUsdt(position.net_pnl_usdt, { signed: true })}
                       </p>
                     </div>

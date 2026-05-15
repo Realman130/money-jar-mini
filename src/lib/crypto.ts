@@ -41,18 +41,35 @@ export function normalizeInvestmentSymbol(raw: string, defaultQuote = "USDT") {
 }
 
 export function parseNumericInput(value: string) {
-  const normalized = value.trim().replace(/[\s,]/g, "");
+  let normalized = value.trim().replace(/\s/g, "").replace(/[^\d,.-]/g, "");
   if (!normalized) {
     return 0;
   }
+
+  const lastComma = normalized.lastIndexOf(",");
+  const lastDot = normalized.lastIndexOf(".");
+
+  if (lastComma !== -1 && lastDot !== -1) {
+    const decimalIndex = Math.max(lastComma, lastDot);
+    const integerPart = normalized.slice(0, decimalIndex).replace(/[.,]/g, "");
+    const fractionPart = normalized.slice(decimalIndex + 1).replace(/[.,]/g, "");
+    normalized = `${integerPart}.${fractionPart}`;
+  } else if (lastComma !== -1) {
+    normalized = normalized.replace(",", ".");
+  } else if ((normalized.match(/\./g) ?? []).length > 1) {
+    const parts = normalized.split(".");
+    normalized = `${parts.slice(0, -1).join("")}.${parts.at(-1) ?? ""}`;
+  }
+
   const parsed = Number.parseFloat(normalized);
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
 export function formatUsdt(amount: number, opts?: { signed?: boolean; minimumFractionDigits?: number; maximumFractionDigits?: number }) {
-  const nf = new Intl.NumberFormat("en-US", {
-    minimumFractionDigits: opts?.minimumFractionDigits ?? 2,
-    maximumFractionDigits: opts?.maximumFractionDigits ?? 4
+  const absolute = Math.abs(amount);
+  const nf = new Intl.NumberFormat("vi-VN", {
+    minimumFractionDigits: opts?.minimumFractionDigits ?? 0,
+    maximumFractionDigits: opts?.maximumFractionDigits ?? (absolute >= 1 ? 2 : 6)
   });
   const value = nf.format(Math.abs(amount));
   if (opts?.signed && amount > 0) {
@@ -69,8 +86,8 @@ export function formatUsdtVndApprox(amountUsdt: number, rate = DEFAULT_USDT_VND_
 }
 
 export function formatPercent(value: number, opts?: { signed?: boolean; minimumFractionDigits?: number; maximumFractionDigits?: number }) {
-  const nf = new Intl.NumberFormat("en-US", {
-    minimumFractionDigits: opts?.minimumFractionDigits ?? 2,
+  const nf = new Intl.NumberFormat("vi-VN", {
+    minimumFractionDigits: opts?.minimumFractionDigits ?? 0,
     maximumFractionDigits: opts?.maximumFractionDigits ?? 2
   });
   const formatted = nf.format(Math.abs(value));

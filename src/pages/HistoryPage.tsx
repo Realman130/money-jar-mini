@@ -299,18 +299,15 @@ export function HistoryPage() {
       )}
 
       {sel ? (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/55 px-3 py-3 backdrop-blur-sm"
-          role="dialog"
-          aria-modal="true"
-          onPointerDown={(e) => {
-            if (e.target === e.currentTarget) {
-              closeSheet();
-            }
-          }}
-        >
+        <div className="fixed inset-0 z-50" role="dialog" aria-modal="true">
+          <button
+            type="button"
+            aria-label="Đóng khung chỉnh sửa"
+            className="absolute inset-0 h-full w-full bg-black/55 backdrop-blur-sm"
+            onPointerDown={closeSheet}
+          />
           <div
-            className="w-full max-w-[430px] overflow-hidden rounded-[32px] border border-white/10 bg-[#0c131f]/96 shadow-[0_30px_90px_rgba(2,6,23,0.55)]"
+            className="absolute inset-x-3 bottom-3 mx-auto w-auto max-w-[430px] overflow-hidden rounded-[32px] border border-white/10 bg-[#0c131f]/96 shadow-[0_30px_90px_rgba(2,6,23,0.55)]"
             onPointerDown={(e) => e.stopPropagation()}
           >
             {!editing ? (

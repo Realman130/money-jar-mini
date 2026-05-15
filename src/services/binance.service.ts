@@ -1,4 +1,4 @@
-const BINANCE_BASE_URL = "https://api.binance.com";
+const BINANCE_BASE_URLS = ["https://data-api.binance.vision", "https://api.binance.com", "https://api-gcp.binance.com"];
 
 type BinancePriceResponse = { symbol: string; price: string };
 type BinanceTicker24hResponse = {
@@ -22,27 +22,42 @@ function uniqueSymbols(symbols: string[]) {
 }
 
 function buildSymbolsParam(symbols: string[]) {
-  return encodeURIComponent(JSON.stringify(uniqueSymbols(symbols)));
+  return JSON.stringify(uniqueSymbols(symbols));
 }
 
 async function requestJson<T>(path: string, searchParams?: Record<string, string>) {
-  const url = new URL(path, BINANCE_BASE_URL);
-  for (const [key, value] of Object.entries(searchParams ?? {})) {
-    url.searchParams.set(key, value);
-  }
+  const errors: string[] = [];
 
-  const controller = new AbortController();
-  const timeout = globalThis.setTimeout(() => controller.abort(), 8_000);
-
-  try {
-    const response = await fetch(url.toString(), { signal: controller.signal });
-    if (!response.ok) {
-      throw new Error(`Binance ${response.status} ${response.statusText}`.trim());
+  for (const baseUrl of BINANCE_BASE_URLS) {
+    const url = new URL(path, baseUrl);
+    for (const [key, value] of Object.entries(searchParams ?? {})) {
+      url.searchParams.set(key, value);
     }
-    return (await response.json()) as T;
-  } finally {
-    globalThis.clearTimeout(timeout);
+
+    const controller = new AbortController();
+    const timeout = globalThis.setTimeout(() => controller.abort(), 8_000);
+
+    try {
+      const response = await fetch(url.toString(), {
+        signal: controller.signal,
+        headers: {
+          accept: "application/json"
+        },
+        cache: "no-store"
+      });
+      if (!response.ok) {
+        errors.push(`${new URL(baseUrl).host}: ${response.status} ${response.statusText}`.trim());
+        continue;
+      }
+      return (await response.json()) as T;
+    } catch (error) {
+      errors.push(`${new URL(baseUrl).host}: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      globalThis.clearTimeout(timeout);
+    }
   }
+
+  throw new Error(errors[0] ?? "Không lấy được giá từ Binance");
 }
 
 function rowsToArray<T>(data: T | T[] | null | undefined) {

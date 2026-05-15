@@ -316,14 +316,18 @@ export function DashboardPage() {
         <div className="grid grid-cols-2 gap-2">
           <MetricCard
             label="Tổng tài sản (USDT)"
-            value={formatUsdt(portfolioSummary?.total_market_value_usdt ?? 0)}
+            value={<span className="block text-[1.3rem] leading-[0.92] tracking-[-0.06em]">{formatUsdt(portfolioSummary?.total_market_value_usdt ?? 0)}</span>}
             hint={`≈ ${formatVnd(Math.round((portfolioSummary?.total_market_value_usdt ?? 0) * portfolioRate))}`}
             tone="accent"
             className="p-3"
           />
           <MetricCard
             label="Lãi / lỗ ròng"
-            value={formatUsdt(portfolioSummary?.net_pnl_usdt ?? 0, { signed: true })}
+            value={
+              <span className="block text-[1.3rem] leading-[0.92] tracking-[-0.06em]">
+                {formatUsdt(portfolioSummary?.net_pnl_usdt ?? 0, { signed: true })}
+              </span>
+            }
             hint={portfolioSummary?.net_pnl_percent != null ? formatPercent(portfolioSummary.net_pnl_percent, { signed: true }) : "—"}
             tone={(portfolioSummary?.net_pnl_usdt ?? 0) >= 0 ? "income" : "expense"}
             className="p-3"
@@ -332,14 +336,14 @@ export function DashboardPage() {
         <div className="grid grid-cols-3 gap-2">
           <MetricCard
             label="Vốn gốc"
-            value={formatUsdt(portfolioSummary?.total_cost_usdt ?? 0)}
+            value={<span className="block text-[1.1rem] leading-[0.92] tracking-[-0.06em]">{formatUsdt(portfolioSummary?.total_cost_usdt ?? 0)}</span>}
             hint="Giá vốn đang nắm giữ"
             tone="neutral"
             className="p-3"
           />
           <MetricCard
             label="24h"
-            value={formatUsdt(portfolioSummary?.pnl_24h_usdt ?? 0, { signed: true })}
+            value={<span className="block text-[1.1rem] leading-[0.92] tracking-[-0.06em]">{formatUsdt(portfolioSummary?.pnl_24h_usdt ?? 0, { signed: true })}</span>}
             hint="Biến động ngắn hạn"
             tone={(portfolioSummary?.pnl_24h_usdt ?? 0) >= 0 ? "income" : "expense"}
             className="p-3"
@@ -375,7 +379,7 @@ export function DashboardPage() {
                       <p className="mt-1 text-xs text-mjm-muted">{position.asset_name}</p>
                     </div>
                     <div className="text-right">
-                      <p className={`font-display text-lg font-semibold tracking-[-0.03em] ${position.net_pnl_usdt >= 0 ? "text-mjm-income" : "text-mjm-expense"}`}>
+                      <p className={`font-display text-[1rem] font-semibold leading-[0.95] tracking-[-0.05em] ${position.net_pnl_usdt >= 0 ? "text-mjm-income" : "text-mjm-expense"}`}>
                         {formatUsdt(position.market_value_usdt)}
                       </p>
                       <p className="mt-1 text-xs text-mjm-muted">≈ {formatVnd(Math.round(position.market_value_usdt * portfolioRate))}</p>
@@ -384,15 +388,15 @@ export function DashboardPage() {
                   <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
                     <div className="rounded-[16px] border border-white/8 bg-black/10 p-2">
                       <p className="text-[10px] uppercase tracking-[0.18em] text-mjm-muted">SL</p>
-                      <p className="mt-1 font-semibold text-mjm-text">{formatUsdt(position.quantity, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}</p>
+                      <p className="mt-1 text-[0.95rem] font-semibold leading-[1.05] text-mjm-text">{formatUsdt(position.quantity, { maximumFractionDigits: 6 })}</p>
                     </div>
                     <div className="rounded-[16px] border border-white/8 bg-black/10 p-2">
                       <p className="text-[10px] uppercase tracking-[0.18em] text-mjm-muted">Giá vốn</p>
-                      <p className="mt-1 font-semibold text-mjm-text">{formatUsdt(position.avg_cost_usdt)}</p>
+                      <p className="mt-1 text-[0.95rem] font-semibold leading-[1.05] text-mjm-text">{formatUsdt(position.avg_cost_usdt)}</p>
                     </div>
                     <div className="rounded-[16px] border border-white/8 bg-black/10 p-2">
                       <p className="text-[10px] uppercase tracking-[0.18em] text-mjm-muted">P/L</p>
-                      <p className={`mt-1 font-semibold ${position.net_pnl_usdt >= 0 ? "text-mjm-income" : "text-mjm-expense"}`}>
+                      <p className={`mt-1 text-[0.95rem] font-semibold leading-[1.05] ${position.net_pnl_usdt >= 0 ? "text-mjm-income" : "text-mjm-expense"}`}>
                         {formatUsdt(position.net_pnl_usdt, { signed: true })}
                       </p>
                     </div>
