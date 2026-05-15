@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { EmptyState } from "@/components/common/EmptyState";
 import { Loading } from "@/components/common/Loading";
@@ -39,6 +39,7 @@ export function HistoryPage() {
   const [toast, setToast] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "thu" | "chi">("all");
   const [query, setQuery] = useState("");
+  const modalRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!ready || !telegramUserId) {
@@ -64,6 +65,42 @@ export function HistoryPage() {
     setEditCat(sel.category_id ?? "");
     setEditWallet(sel.wallet_id ?? "");
     setEditType(sel.type === "thu" ? "thu" : "chi");
+  }, [sel]);
+
+  useEffect(() => {
+    if (!sel) {
+      return;
+    }
+
+    const handlePointerOutside = (event: Event) => {
+      const target = event.target;
+      const modal = modalRef.current;
+      if (!(target instanceof Node) || !modal) {
+        return;
+      }
+      if (modal.contains(target)) {
+        return;
+      }
+      closeSheet();
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        closeSheet();
+      }
+    };
+
+    document.addEventListener("pointerdown", handlePointerOutside, true);
+    document.addEventListener("touchstart", handlePointerOutside, true);
+    document.addEventListener("mousedown", handlePointerOutside, true);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerOutside, true);
+      document.removeEventListener("touchstart", handlePointerOutside, true);
+      document.removeEventListener("mousedown", handlePointerOutside, true);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
   }, [sel]);
 
   const catMap = useMemo(() => {
@@ -300,15 +337,10 @@ export function HistoryPage() {
 
       {sel ? (
         <div className="fixed inset-0 z-50" role="dialog" aria-modal="true">
-          <button
-            type="button"
-            aria-label="Đóng khung chỉnh sửa"
-            className="absolute inset-0 h-full w-full bg-black/55 backdrop-blur-sm"
-            onPointerDown={closeSheet}
-          />
+          <div aria-hidden="true" className="absolute inset-0 bg-black/55 backdrop-blur-sm" />
           <div
+            ref={modalRef}
             className="absolute inset-x-3 bottom-3 mx-auto w-auto max-w-[430px] overflow-hidden rounded-[32px] border border-white/10 bg-[#0c131f]/96 shadow-[0_30px_90px_rgba(2,6,23,0.55)]"
-            onPointerDown={(e) => e.stopPropagation()}
           >
             {!editing ? (
               <div className="space-y-4 p-4">
