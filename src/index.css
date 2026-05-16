@@ -5,19 +5,6 @@
 @tailwind utilities;
 
 :root {
-  --mjm-bg: #eef2ff;
-  --mjm-surface: #ffffff;
-  --mjm-border: #d5def0;
-  --mjm-text: #0f172a;
-  --mjm-muted: #5b6b84;
-  --mjm-income: #0f9d58;
-  --mjm-expense: #e24b4b;
-  --mjm-accent: #2563eb;
-  --mjm-warn: #d97706;
-  --mjm-danger: #c73a3a;
-}
-
-.dark {
   --mjm-bg: #0a1018;
   --mjm-surface: #111827;
   --mjm-border: #273244;
@@ -37,12 +24,8 @@ body,
   min-height: 100dvh;
 }
 
-html.dark {
+html {
   color-scheme: dark;
-}
-
-html:not(.dark) {
-  color-scheme: light;
 }
 
 body {

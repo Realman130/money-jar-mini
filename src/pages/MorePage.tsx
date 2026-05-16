@@ -39,7 +39,7 @@ export function MorePage() {
         <div className="space-y-3 text-sm leading-6 text-mjm-muted">
           <p>• Dùng <span className="font-semibold text-mjm-text">Ví</span> để kiểm tra số dư và loại ví đang hoạt động.</p>
           <p>• Dùng <span className="font-semibold text-mjm-text">Ngân sách / 6 hũ</span> để đặt thu nhập dự kiến theo tháng.</p>
-          <p>• Dùng <span className="font-semibold text-mjm-text">Cài đặt</span> để đồng bộ theme Telegram và tuỳ biến trải nghiệm.</p>
+          <p>• Dùng <span className="font-semibold text-mjm-text">Cài đặt</span> để xem thông số hệ thống và trạng thái PWA hiện tại.</p>
         </div>
       </Surface>
     </div>

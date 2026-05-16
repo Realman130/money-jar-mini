@@ -40,21 +40,6 @@ export function getTelegramUserName(): { first?: string; username?: string } {
 }
 
 export function syncTelegramTheme(): TelegramTheme {
-  const host = typeof window !== "undefined" ? window.location.hostname : "";
-  if (host === "localhost" || host === "127.0.0.1" || host === "::1") {
-    document.documentElement.classList.add("dark");
-    return "dark";
-  }
-
-  const scheme = getWebApp()?.colorScheme;
-  if (scheme === "dark") {
-    document.documentElement.classList.add("dark");
-    return "dark";
-  }
-  if (scheme === "light") {
-    document.documentElement.classList.remove("dark");
-    return "light";
-  }
   document.documentElement.classList.add("dark");
   return "dark";
 }
