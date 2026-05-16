@@ -48,6 +48,7 @@ const chartLabelStyle = {
 };
 
 const COLORS = ["#5b8cff", "#4ade80", "#ff7462", "#fbbf24", "#8b5cf6", "#ec4899", "#14b8a6"];
+const RADIAN = Math.PI / 180;
 
 function CategoryTooltip({
   active,
@@ -78,6 +79,47 @@ function CategoryTooltip({
         <span className="text-sm font-semibold tabular-nums text-mjm-text">{formatVnd(amount)}</span>
       </div>
     </div>
+  );
+}
+
+function JarPieCalloutLabel(
+  props: {
+    cx?: number;
+    cy?: number;
+    midAngle?: number;
+    outerRadius?: number;
+    percent?: number;
+    index?: number;
+    payload?: { category_name?: string };
+  },
+  highlightedIndexes: Set<number>
+) {
+  const { cx = 0, cy = 0, midAngle = 0, outerRadius = 0, percent = 0, index = -1, payload } = props;
+  if (!highlightedIndexes.has(index) || percent < 0.04) {
+    return null;
+  }
+
+  const sin = Math.sin(-RADIAN * midAngle);
+  const cos = Math.cos(-RADIAN * midAngle);
+  const startX = cx + (outerRadius + 6) * cos;
+  const startY = cy + (outerRadius + 6) * sin;
+  const midX = cx + (outerRadius + 18) * cos;
+  const midY = cy + (outerRadius + 18) * sin;
+  const endX = midX + (cos >= 0 ? 18 : -18);
+  const endY = midY;
+  const textAnchor = cos >= 0 ? "start" : "end";
+
+  return (
+    <g>
+      <path d={`M${startX},${startY} L${midX},${midY} L${endX},${endY}`} stroke="rgba(255,255,255,0.55)" strokeWidth={1.5} fill="none" />
+      <circle cx={endX} cy={endY} r={2.5} fill="#f4f7fb" />
+      <text x={endX + (cos >= 0 ? 6 : -6)} y={endY - 4} textAnchor={textAnchor} fill="#f4f7fb" fontSize="11" fontWeight="700">
+        {payload?.category_name}
+      </text>
+      <text x={endX + (cos >= 0 ? 6 : -6)} y={endY + 11} textAnchor={textAnchor} fill="#94a3b8" fontSize="10">
+        {formatPercent(percent * 100, { maximumFractionDigits: 1 })}
+      </text>
+    </g>
   );
 }
 
@@ -293,6 +335,10 @@ export function ReportsPage() {
   }, null);
   const selectedJarBudget = selectedJar ? Math.round((plannedIncome * (selectedJar.target_percent ?? 0)) / 100) : 0;
   const selectedJarShareOfIncome = plannedIncome > 0 && selectedJar ? (selectedJar.actual_amount / plannedIncome) * 100 : 0;
+  const highlightedJarIndexes = useMemo(
+    () => new Set(jarBreakdown.map((_, index) => index).filter((index) => index < 3)),
+    [jarBreakdown]
+  );
 
   return (
     <div className="space-y-5">
@@ -542,6 +588,8 @@ export function ReportsPage() {
                           innerRadius={54}
                           outerRadius={92}
                           paddingAngle={2}
+                          labelLine={false}
+                          label={(props) => JarPieCalloutLabel(props, highlightedJarIndexes)}
                         >
                           {jarBreakdown.map((entry, index) => (
                             <Cell key={`${entry.category_name}-${index}`} fill={entry.category_color || COLORS[index % COLORS.length]} />
