@@ -301,6 +301,10 @@ export function ReportsPage() {
     () => jarCards.find((jar) => jar.jar_code === selectedJarCode) ?? null,
     [jarCards, selectedJarCode]
   );
+  const highlightedJarIndexes = useMemo(
+    () => new Set(jarBreakdown.map((_, index) => index).filter((index) => index < 3)),
+    [jarBreakdown]
+  );
 
   const totalExpense = summary?.total_expense ?? 0;
   const totalIncome = summary?.total_income ?? 0;
@@ -335,10 +339,6 @@ export function ReportsPage() {
   }, null);
   const selectedJarBudget = selectedJar ? Math.round((plannedIncome * (selectedJar.target_percent ?? 0)) / 100) : 0;
   const selectedJarShareOfIncome = plannedIncome > 0 && selectedJar ? (selectedJar.actual_amount / plannedIncome) * 100 : 0;
-  const highlightedJarIndexes = useMemo(
-    () => new Set(jarBreakdown.map((_, index) => index).filter((index) => index < 3)),
-    [jarBreakdown]
-  );
 
   return (
     <div className="space-y-5">
