@@ -72,12 +72,12 @@ function inferType(noteNorm: string): TransactionType {
 }
 
 function extractAmountSegment(line: string): { amount: number; before: string; after: string } | null {
-  const re = /(\d+(?:[.,]\d+)?)(?:\s*(k|nghin|nghìn|tr|trieu|triệu|m)(?=$|[\s)\]}.!?,;:/\\-]))?/i;
+  const re = /(\d+(?:[.,]\d+)?)(?:\s*(k|nghin|nghìn|tr|trieu|triệu|m)(\d{1,3})?(?=$|[\s)\]}.!?,;:/\\-]))?/i;
   const m = line.match(re);
   if (!m || m.index === undefined) {
     return null;
   }
-  const amt = parseAmountToken(m[1], m[2] ?? "");
+  const amt = parseAmountToken(m[1], m[2] ?? "", m[3] ?? "");
   if (amt == null) {
     return null;
   }
@@ -215,7 +215,7 @@ export function parseQuickInput(
   const seg = extractAmountSegment(line);
   if (!seg) {
     return {
-      error: "Chưa nhận diện được số tiền. Ví dụ: 35k, 1tr2, 120.000"
+      error: "Chưa nhận diện được số tiền. Ví dụ: 35k, 1tr2, 1tr5, 120.000"
     };
   }
 
