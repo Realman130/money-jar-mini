@@ -25,6 +25,15 @@ export interface WalletRow {
   is_active: boolean;
 }
 
+export interface WalletBalanceRow {
+  wallet_id: string;
+  telegram_user_id: number;
+  code: string;
+  name_vi: string;
+  kind: WalletKind;
+  current_balance: number;
+}
+
 export interface JarRow {
   id: string;
   code: string;
@@ -46,8 +55,17 @@ export interface TransactionRow {
   source: TxSource;
   merchant: string | null;
   tags: string[];
+  is_adjustment: boolean;
   created_at: string;
   deleted_at: string | null;
+}
+
+export interface WalletReconciliationResult {
+  transaction_id: string | null;
+  delta: number;
+  adjustment_type: "thu" | "chi" | "none";
+  category_id: string | null;
+  actual_balance: number;
 }
 
 export interface TransferRow {

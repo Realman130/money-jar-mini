@@ -4,28 +4,31 @@ import { EmptyState } from "@/components/common/EmptyState";
 import { Loading } from "@/components/common/Loading";
 import { MoneyText } from "@/components/common/MoneyText";
 import { MetricCard, Pill, ProgressBar, SectionHeader, Surface } from "@/components/common/Fintech";
+import { WalletReconciliationDialog } from "@/components/wallets/WalletReconciliationDialog";
 import { useApp } from "@/context/AppContext";
 import { fetchWalletBalances } from "@/services/wallet.service";
+import { reconcileWalletBalance } from "@/services/wallet-reconciliation.service";
+import type { WalletBalanceRow } from "@/types/domain";
 
 export function WalletsPage() {
   const { telegramUserId, ready, error } = useApp();
-  const [rows, setRows] = useState<{ name_vi: string; code: string; current_balance: number; kind: string }[]>([]);
+  const [rows, setRows] = useState<WalletBalanceRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedWallet, setSelectedWallet] = useState<WalletBalanceRow | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+
+  const loadBalances = async (uid: number) => {
+    const data = await fetchWalletBalances(uid);
+    setRows(data);
+  };
 
   useEffect(() => {
     if (!ready || !telegramUserId) {
       setLoading(false);
       return;
     }
-    fetchWalletBalances(telegramUserId)
-      .then((d) =>
-        setRows(
-          (d as { name_vi: string; code: string; current_balance: number; kind: string }[]).map((r) => ({
-            ...r,
-            current_balance: Number(r.current_balance)
-          }))
-        )
-      )
+    setLoading(true);
+    loadBalances(telegramUserId)
       .finally(() => setLoading(false));
   }, [ready, telegramUserId]);
 
@@ -45,6 +48,32 @@ export function WalletsPage() {
   if (loading) {
     return <Loading />;
   }
+
+  const handleConfirmReconciliation = async ({ actualBalance, targetJarId }: { actualBalance: number; targetJarId: string | null }) => {
+    if (!telegramUserId || !selectedWallet) {
+      throw new Error("Không tìm thấy ví để đối soát.");
+    }
+
+    const result = await reconcileWalletBalance({
+      userId: telegramUserId,
+      walletId: selectedWallet.wallet_id,
+      appBalance: selectedWallet.current_balance,
+      actualBalance,
+      targetJarId
+    });
+
+    await loadBalances(telegramUserId);
+    setSelectedWallet(null);
+    setToast(
+      result.delta === 0
+        ? "Số dư đã khớp, không cần tạo bù lệch."
+        : result.adjustment_type === "thu"
+          ? `Đã chốt số dư và tạo dòng thu bù ${Math.abs(result.delta).toLocaleString("vi-VN")}đ.`
+          : `Đã chốt số dư và tạo dòng chi bù ${Math.abs(result.delta).toLocaleString("vi-VN")}đ.`
+    );
+    window.setTimeout(() => setToast(null), 2600);
+    return result;
+  };
 
   return (
     <div className="space-y-5">
@@ -100,7 +129,16 @@ export function WalletsPage() {
                     </div>
                     <p className="mt-1 text-xs text-mjm-muted">{r.code.toUpperCase()}</p>
                   </div>
-                  <MoneyText amount={r.current_balance} />
+                  <div className="text-right">
+                    <MoneyText amount={r.current_balance} />
+                    <button
+                      type="button"
+                      onClick={() => setSelectedWallet(r)}
+                      className="mt-2 inline-flex rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-mjm-text transition hover:border-mjm-accent/35 hover:bg-mjm-accent/12 hover:text-mjm-accent"
+                    >
+                      Chốt số dư thực tế
+                    </button>
+                  </div>
                 </div>
                 <ProgressBar value={share} tone={tone} className="mt-3" />
               </div>
@@ -108,6 +146,19 @@ export function WalletsPage() {
           })}
         </div>
       </Surface>
+
+      <WalletReconciliationDialog
+        open={selectedWallet != null}
+        wallet={selectedWallet}
+        onClose={() => setSelectedWallet(null)}
+        onConfirm={handleConfirmReconciliation}
+      />
+
+      {toast ? (
+        <div className="fixed bottom-24 left-1/2 z-[60] -translate-x-1/2 rounded-full border border-white/10 bg-[#0d1420]/95 px-4 py-2 text-sm font-medium text-mjm-text shadow-[0_20px_50px_rgba(2,6,23,0.45)] backdrop-blur-2xl">
+          {toast}
+        </div>
+      ) : null}
     </div>
   );
 }
