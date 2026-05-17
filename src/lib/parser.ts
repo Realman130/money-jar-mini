@@ -72,7 +72,7 @@ function inferType(noteNorm: string): TransactionType {
 }
 
 function extractAmountSegment(line: string): { amount: number; before: string; after: string } | null {
-  const re = /(\d+(?:[.,]\d+)?)\s*(k|nghin|nghìn|tr|trieu|triệu|m)?/i;
+  const re = /(\d+(?:[.,]\d+)?)(?:\s*(k|nghin|nghìn|tr|trieu|triệu|m)(?=$|[\s)\]}.!?,;:/\\-]))?/i;
   const m = line.match(re);
   if (!m || m.index === undefined) {
     return null;
