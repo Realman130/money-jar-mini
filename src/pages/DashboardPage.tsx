@@ -5,7 +5,7 @@ import { EmptyState } from "@/components/common/EmptyState";
 import { Loading } from "@/components/common/Loading";
 import { MoneyText } from "@/components/common/MoneyText";
 import { formatErrorMessage } from "@/lib/error";
-import { DEFAULT_USDT_VND_RATE, formatPercent, formatUsdt } from "@/lib/crypto";
+import { formatPercent, formatUsdt } from "@/lib/crypto";
 import { formatVnd } from "@/lib/money";
 import { useApp } from "@/context/AppContext";
 import {
@@ -22,7 +22,7 @@ import { MetricCard, Pill, ProgressBar, SectionHeader, Surface } from "@/compone
 import { useForegroundRefresh } from "@/hooks/useForegroundRefresh";
 
 export function DashboardPage() {
-  const { telegramUserId, ready, error, categories } = useApp();
+  const { telegramUserId, ready, error, categories, usdtVndRate } = useApp();
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [month] = useState(() => currentMonthStart());
@@ -185,7 +185,7 @@ export function DashboardPage() {
   const totalAssets = balances.reduce((sum, row) => sum + row.current_balance, 0);
   const portfolioSummary = portfolio?.summary;
   const portfolioPositions = portfolio?.positions ?? [];
-  const portfolioRate = DEFAULT_USDT_VND_RATE;
+  const portfolioRate = usdtVndRate;
   const topPortfolioPositions = portfolioPositions.slice(0, 3);
 
   if (!ready) {

@@ -30,3 +30,35 @@ export async function buildCategoryAliasMap(): Promise<Map<string, string>> {
   }
   return m;
 }
+
+export async function createCategory(input: Omit<CategoryRow, "id" | "is_active">): Promise<CategoryRow> {
+  const { data, error } = await supabase
+    .from("categories")
+    .insert({
+      type: input.type,
+      parent_name: input.parent_name,
+      name: input.name,
+      icon: input.icon || "📁",
+      color: input.color || "#64748b",
+      jar_id: input.jar_id || null,
+      sort_order: input.sort_order ?? 0,
+      is_active: true
+    })
+    .select()
+    .single();
+  if (error) {
+    throw error;
+  }
+  return data as CategoryRow;
+}
+
+export async function updateCategory(id: string, input: Partial<Omit<CategoryRow, "id">>): Promise<void> {
+  const { error } = await supabase
+    .from("categories")
+    .update(input)
+    .eq("id", id);
+  if (error) {
+    throw error;
+  }
+}
+

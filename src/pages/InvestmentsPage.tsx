@@ -6,7 +6,6 @@ import { MetricCard, Pill, ProgressBar, SectionHeader, Surface } from "@/compone
 import { formatErrorMessage } from "@/lib/error";
 import { formatVnd } from "@/lib/money";
 import {
-  DEFAULT_USDT_VND_RATE,
   formatPercent,
   formatUsdt,
   normalizeInvestmentSymbol,
@@ -52,7 +51,7 @@ function emptySummary(): InvestmentPortfolioOverview {
 }
 
 export function InvestmentsPage() {
-  const { telegramUserId, ready, error } = useApp();
+  const { telegramUserId, ready, error, usdtVndRate } = useApp();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [pageError, setPageError] = useState<string | null>(null);
@@ -111,7 +110,7 @@ export function InvestmentsPage() {
   );
 
   const previewSymbol = useMemo(() => normalizeInvestmentSymbol(form.assetCode), [form.assetCode]);
-  const rate = DEFAULT_USDT_VND_RATE;
+  const rate = usdtVndRate;
   const summary = portfolio.summary;
   const positions = portfolio.positions;
   const hasPositions = summary.total_positions > 0;

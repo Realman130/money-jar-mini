@@ -4,6 +4,24 @@ const QUOTE_ASSETS = ["USDT", "USDC", "FDUSD", "BUSD", "TUSD", "DAI", "TRY", "EU
 
 export const DEFAULT_USDT_VND_RATE = Number(import.meta.env.VITE_USDT_VND_RATE ?? 25_000);
 
+export async function fetchUsdtVndRate(): Promise<number> {
+  try {
+    const res = await fetch("https://open.er-api.com/v6/latest/USD");
+    if (!res.ok) {
+      throw new Error("Failed to fetch exchange rate");
+    }
+    const data = await res.json();
+    const rate = data?.rates?.VND;
+    if (typeof rate === "number" && rate > 0) {
+      return rate;
+    }
+    return DEFAULT_USDT_VND_RATE;
+  } catch (error) {
+    console.warn("MJM: Lỗi khi lấy tỷ giá USD/VND, dùng tỷ giá mặc định", error);
+    return DEFAULT_USDT_VND_RATE;
+  }
+}
+
 function cleanAssetCode(raw: string) {
   return raw
     .trim()
