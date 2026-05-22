@@ -243,8 +243,8 @@ export function HistoryPage() {
           <MetricCard label="Chi" value={chiCount.toLocaleString("vi-VN")} tone="expense" hint="Dòng chi" className="p-3" />
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-[1.4fr_0.8fr]">
-          <label className="block">
+        <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+          <label className="block min-w-0">
             <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-mjm-muted">Tìm kiếm</span>
             <input
               className={fieldClass}
@@ -253,7 +253,7 @@ export function HistoryPage() {
               placeholder="Tìm theo ghi chú, danh mục, ví, ngày..."
             />
           </label>
-          <div className="grid grid-cols-3 gap-2 self-end">
+          <div className="grid grid-cols-3 gap-2 md:w-[min(100%,20rem)] md:shrink-0">
             {([
               ["all", "Tất cả"],
               ["chi", "Chi"],
@@ -340,7 +340,7 @@ export function HistoryPage() {
           <div aria-hidden="true" className="absolute inset-0 bg-black/55 backdrop-blur-sm" />
           <div
             ref={modalRef}
-            className="absolute inset-x-3 bottom-3 mx-auto w-auto max-w-[430px] overflow-hidden rounded-[32px] border border-white/10 bg-[#0c131f]/96 shadow-[0_30px_90px_rgba(2,6,23,0.55)]"
+            className="absolute inset-x-3 bottom-3 mx-auto w-auto max-w-[430px] overflow-hidden rounded-[32px] border border-white/10 bg-[#0c131f]/96 shadow-[0_30px_90px_rgba(2,6,23,0.55)] md:inset-x-auto md:bottom-auto md:left-1/2 md:top-1/2 md:w-full md:max-w-xl md:-translate-x-1/2 md:-translate-y-1/2"
           >
             {!editing ? (
               <div className="space-y-4 p-4">
@@ -496,7 +496,7 @@ export function HistoryPage() {
       ) : null}
 
       {toast ? (
-        <div className="fixed bottom-24 left-1/2 z-[60] -translate-x-1/2 rounded-full border border-white/10 bg-[#0d1420]/95 px-4 py-2 text-sm font-medium text-mjm-text shadow-[0_20px_50px_rgba(2,6,23,0.45)] backdrop-blur-2xl">
+        <div className="fixed bottom-24 left-1/2 z-[60] -translate-x-1/2 rounded-full md:bottom-8 border border-white/10 bg-[#0d1420]/95 px-4 py-2 text-sm font-medium text-mjm-text shadow-[0_20px_50px_rgba(2,6,23,0.45)] backdrop-blur-2xl">
           {toast}
         </div>
       ) : null}

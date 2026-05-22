@@ -31,6 +31,7 @@ import {
   getMonthlySummary
 } from "@/services/report.service";
 import { fetchWalletBalances } from "@/services/wallet.service";
+import { formatChartAxisVnd } from "@/lib/chart";
 import { formatVnd } from "@/lib/money";
 import { formatPercent } from "@/lib/crypto";
 
@@ -365,7 +366,7 @@ export function ReportsPage() {
         <div className="space-y-4">
           <Surface className="space-y-4">
             <SectionHeader title="Tình hình tháng" subtitle="Cân bằng thu chi và mức tiêu hao so với quỹ dự kiến." />
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
               <div className="rounded-[20px] border border-white/8 bg-white/[0.03] p-3">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-mjm-muted">Thu</p>
                 <div className="mt-2 whitespace-nowrap text-[0.82rem] font-semibold tabular-nums tracking-[-0.04em] text-mjm-income sm:text-[0.9rem]">
@@ -404,15 +405,15 @@ export function ReportsPage() {
             </div>
           </Surface>
 
-          <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="grid gap-4 md:grid-cols-2">
             <Surface className="space-y-3">
               <SectionHeader title="Chi và thu theo ngày" subtitle="Tháng này hiển thị theo từng ngày để thấy nhịp tiền." />
-              <div className="h-72 overflow-hidden rounded-[22px] border border-white/10 bg-black/10 p-2">
+              <div className="h-72 overflow-hidden rounded-[22px] border border-white/10 bg-black/10 p-2 md:h-80 lg:h-96">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={dailyChart}>
+                  <BarChart data={dailyChart} margin={{ top: 8, right: 12, left: 4, bottom: 4 }}>
                     <CartesianGrid stroke="rgba(255,255,255,0.08)" strokeDasharray="3 3" />
-                    <XAxis dataKey="day" tick={chartLabelStyle} axisLine={false} tickLine={false} />
-                    <YAxis tick={chartLabelStyle} axisLine={false} tickLine={false} width={44} />
+                    <XAxis dataKey="day" tick={chartLabelStyle} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+                    <YAxis tick={chartLabelStyle} axisLine={false} tickLine={false} width={52} tickFormatter={formatChartAxisVnd} />
                     <Tooltip
                       formatter={(value: number, name: string) => [formatVnd(value), name === "total_income" ? "Thu" : "Chi"]}
                       contentStyle={chartTooltipStyle}
@@ -428,12 +429,12 @@ export function ReportsPage() {
 
             <Surface className="space-y-3">
               <SectionHeader title="Chi lũy kế" subtitle="Theo dõi tốc độ cộng dồn để nhìn ra những cú bứt chi." />
-              <div className="h-72 overflow-hidden rounded-[22px] border border-white/10 bg-black/10 p-2">
+              <div className="h-72 overflow-hidden rounded-[22px] border border-white/10 bg-black/10 p-2 md:h-80 lg:h-96">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={cumulative}>
+                  <LineChart data={cumulative} margin={{ top: 8, right: 12, left: 4, bottom: 4 }}>
                     <CartesianGrid stroke="rgba(255,255,255,0.08)" strokeDasharray="3 3" />
-                    <XAxis dataKey="day" tick={chartLabelStyle} axisLine={false} tickLine={false} />
-                    <YAxis tick={chartLabelStyle} axisLine={false} tickLine={false} width={44} />
+                    <XAxis dataKey="day" tick={chartLabelStyle} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+                    <YAxis tick={chartLabelStyle} axisLine={false} tickLine={false} width={52} tickFormatter={formatChartAxisVnd} />
                     <Tooltip
                       formatter={(value: number) => formatVnd(value)}
                       contentStyle={chartTooltipStyle}
@@ -461,12 +462,12 @@ export function ReportsPage() {
         <div className="space-y-4">
           <Surface className="space-y-3">
             <SectionHeader title="Chi theo danh mục" subtitle="Bar chart dễ scan hơn pie chart trên mobile." />
-            <div className="h-72 overflow-hidden rounded-[22px] border border-white/10 bg-black/10 p-2">
+            <div className="h-72 overflow-hidden rounded-[22px] border border-white/10 bg-black/10 p-2 md:h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={sortedCats} layout="vertical" margin={{ left: 12, right: 20 }}>
+                <BarChart data={sortedCats} layout="vertical" margin={{ left: 8, right: 20, top: 8, bottom: 8 }}>
                   <CartesianGrid stroke="rgba(255,255,255,0.08)" strokeDasharray="3 3" />
-                  <XAxis type="number" tick={chartLabelStyle} axisLine={false} tickLine={false} />
-                  <YAxis type="category" dataKey="category_name" tick={chartLabelStyle} axisLine={false} tickLine={false} width={120} />
+                  <XAxis type="number" tick={chartLabelStyle} axisLine={false} tickLine={false} tickFormatter={formatChartAxisVnd} />
+                  <YAxis type="category" dataKey="category_name" tick={chartLabelStyle} axisLine={false} tickLine={false} width={140} />
                   <Tooltip content={<CategoryTooltip />} cursor={{ fill: "rgba(91,140,255,0.08)" }} />
                   <Bar dataKey="total_amount" radius={[0, 12, 12, 0]}>
                     {sortedCats.map((entry, index) => (
@@ -553,7 +554,7 @@ export function ReportsPage() {
                 action={<Pill tone="accent">{formatPercent(selectedJarShareOfIncome, { maximumFractionDigits: 1 })}</Pill>}
               />
 
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
                 <div className="rounded-[20px] border border-white/8 bg-white/[0.03] p-3">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-mjm-muted">Đã chi</p>
                   <div className="mt-2 text-[0.88rem] font-semibold tracking-[-0.04em] text-mjm-expense">{formatVnd(selectedJar.actual_amount)}</div>
@@ -577,8 +578,8 @@ export function ReportsPage() {
               {jarBreakdown.length === 0 ? (
                 <EmptyState title="Chưa có chi tiêu trong hũ này" hint="Khi phát sinh giao dịch thuộc hũ này, breakdown sẽ hiện ra tại đây." />
               ) : (
-                <div className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
-                  <div className="h-72 overflow-hidden rounded-[22px] border border-white/10 bg-black/10 p-2">
+                <div className="grid gap-4 md:grid-cols-[minmax(280px,1fr)_minmax(0,1.15fr)] md:items-start">
+                  <div className="h-72 overflow-hidden rounded-[22px] border border-white/10 bg-black/10 p-2 md:h-80 lg:min-h-[22rem]">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie

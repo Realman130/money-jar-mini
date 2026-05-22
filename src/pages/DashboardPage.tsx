@@ -252,7 +252,7 @@ export function DashboardPage() {
             </div>
           </div>
 
-          <div className="mt-5 grid grid-cols-3 gap-2">
+          <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-3">
             <div className="rounded-[18px] border border-white/8 bg-white/[0.03] p-3">
               <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-mjm-muted">Tổng thu</p>
               <MoneyText amount={thu} type="income" />
@@ -280,7 +280,7 @@ export function DashboardPage() {
         </div>
       </Surface>
 
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
         <Link
           to="/quick?mode=chi"
           className="group rounded-[24px] border border-mjm-expense/25 bg-mjm-expense/10 p-4 transition duration-200 hover:-translate-y-0.5 hover:bg-mjm-expense/14"
