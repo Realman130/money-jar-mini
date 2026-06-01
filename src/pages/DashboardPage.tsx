@@ -203,7 +203,9 @@ export function DashboardPage() {
 
   const thu = summary?.total_income ?? 0;
   const chi = summary?.total_expense ?? 0;
-  const conLai = summary?.net_amount ?? thu - chi;
+  const monthlyNet = summary?.net_amount ?? thu - chi;
+  const openingCarry = totalAssets - monthlyNet;
+  const conLai = openingCarry + monthlyNet;
   const rate = summary?.saving_rate_percent;
   const daysInMonth = new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0).getDate();
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" });
@@ -242,6 +244,9 @@ export function DashboardPage() {
                   {conLai < 0 ? "-" : "+"}
                   {formatVnd(Math.abs(conLai))}
                 </span>
+              </p>
+              <p className="mt-3 text-sm leading-6 text-mjm-muted">
+                Đầu kỳ mang sang: <span className="font-semibold text-mjm-text">{formatVnd(openingCarry)}</span>
               </p>
               <p className="mt-2 max-w-md text-sm leading-6 text-mjm-muted">{heroCopy}</p>
             </div>
