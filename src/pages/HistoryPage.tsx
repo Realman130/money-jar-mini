@@ -6,7 +6,7 @@ import { MoneyText } from "@/components/common/MoneyText";
 import { Surface, Pill, MetricCard, ProgressBar, SectionHeader } from "@/components/common/Fintech";
 import { useApp } from "@/context/AppContext";
 import { fetchTransactionsEnriched, softDeleteTransaction, updateTransaction } from "@/services/transaction.service";
-import { monthStart } from "@/lib/date";
+import { addDays, todayISODate } from "@/lib/date";
 
 type Row = {
   id: string;
@@ -22,6 +22,7 @@ type Row = {
 
 const fieldClass =
   "w-full rounded-[18px] border border-white/10 bg-white/[0.03] px-4 py-3 text-mjm-text placeholder:text-mjm-muted outline-none transition focus:border-mjm-accent/50 focus:ring-4 focus:ring-mjm-accent/15";
+const HISTORY_LOOKBACK_DAYS = 90;
 
 export function HistoryPage() {
   const { telegramUserId, ready, error, categories, wallets } = useApp();
@@ -46,8 +47,8 @@ export function HistoryPage() {
       setLoading(false);
       return;
     }
-    const m = monthStart();
-    fetchTransactionsEnriched(telegramUserId, { from: m })
+    const from = addDays(todayISODate(), -(HISTORY_LOOKBACK_DAYS - 1));
+    fetchTransactionsEnriched(telegramUserId, { from })
       .then((data) => {
         setRows(data as Row[]);
       })
@@ -233,9 +234,14 @@ export function HistoryPage() {
 
       <Surface className="space-y-4">
         <SectionHeader
-          title="Dòng tiền tháng này"
-          subtitle="Một timeline ngắn gọn để scan giao dịch nhanh hơn."
-          action={<Pill tone={typeTone}>{filter === "all" ? "Tất cả" : filter === "thu" ? "Thu" : "Chi"}</Pill>}
+          title="Dòng tiền gần đây"
+          subtitle={`Hiển thị ${HISTORY_LOOKBACK_DAYS} ngày gần nhất để xem và sửa các giao dịch sát ngày qua tháng.`}
+          action={
+            <div className="flex items-center gap-2">
+              <Pill tone="neutral">{HISTORY_LOOKBACK_DAYS} ngày</Pill>
+              <Pill tone={typeTone}>{filter === "all" ? "Tất cả" : filter === "thu" ? "Thu" : "Chi"}</Pill>
+            </div>
+          }
         />
         <div className="grid grid-cols-3 gap-2">
           <MetricCard label="Giao dịch" value={rowsCount.toLocaleString("vi-VN")} hint="Tổng số dòng" className="p-3" />
